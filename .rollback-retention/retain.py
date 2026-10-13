@@ -355,13 +355,59 @@ def admit_draft(record, release):
     )
 
 
+def verify_r_history():
+    for run_id, revision in (
+        (38394553441, R_SOURCE),
+        (38435902670, "d909928c94f308550c7f584c12b6b42506c4c84c"),
+    ):
+        run = github(f"/repos/{REPOSITORY}/actions/runs/{run_id}")
+        require(
+            run["id"] == run_id
+            and run["head_sha"] == revision
+            and run["run_attempt"] == 1
+            and run["status"] == "completed"
+            and run["conclusion"] == "success",
+            "R retained run/source identity differs",
+        )
+    artifact = github(f"/repos/{REPOSITORY}/actions/artifacts/11811851297")
+    require(
+        artifact["id"] == 11811851297
+        and artifact["name"] == "native-r-ubuntu-24.04"
+        and artifact["workflow_run"]["id"] == 38394553441
+        and artifact["workflow_run"]["head_sha"] == R_SOURCE,
+        "R retained original artifact differs",
+    )
+    artifacts = github(
+        f"/repos/{REPOSITORY}/actions/runs/38435902670/artifacts?per_page=100"
+    )["artifacts"]
+    expected = {
+        "r-source-rollback-ubuntu-24.04": 11832953460,
+        "r-source-rollback-macos-15": 11837325176,
+        "r-source-rollback-windows-latest": 11834482773,
+    }
+    actual = {
+        asset["name"]: asset["id"] for asset in artifacts if asset["name"] in expected
+    }
+    require(actual == expected, "R canonical rehearsal artifact set differs")
+    return {
+        "source_run": 38394553441,
+        "source_artifact": 11811851297,
+        "canonical_rehearsal_run": 38435902670,
+        "canonical_rehearsal_artifacts": expected,
+        "identity": "pass",
+    }
+
+
 def retain(checks, output):
     receipt = {
         "repository": REPOSITORY,
         "publication": "unpublished drafts; no publication operation",
+        "status": "in progress",
         "checks": checks,
+        "r_hosted_history": verify_r_history(),
         "releases": [],
     }
+    output.write_text(json.dumps(receipt, indent=2) + "\n")
     for language, release in RELEASES.items():
         path = f"/repos/{REPOSITORY}/releases/{release['id']}"
         record = github(path)
@@ -374,6 +420,7 @@ def retain(checks, output):
             "draft": True,
             "assets": [],
         }
+        receipt["releases"].append(row)
         for name, size in release["assets"].items():
             payload = (ROOT / "payload" / language / name).read_bytes()
             current = github(path)
@@ -404,9 +451,11 @@ def retain(checks, output):
                     "reused_without_overwrite": name in assets,
                 }
             )
+            output.write_text(json.dumps(receipt, indent=2) + "\n")
         admit_draft(github(path), release)
-        receipt["releases"].append(row)
         output.write_text(json.dumps(receipt, indent=2) + "\n")
+    receipt["status"] = "pass"
+    output.write_text(json.dumps(receipt, indent=2) + "\n")
     print(
         "Both reviewed draft asset sets uploaded and authenticated bytes compared; no publication"
     )

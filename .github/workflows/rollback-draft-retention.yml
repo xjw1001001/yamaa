@@ -22,7 +22,9 @@ jobs:
         with:
           python-version: '3.12'
       - name: Verify reviewed source, package and fresh-install receipt identities
-        run: python .rollback-retention/retain.py --check
+        run: |
+          python .rollback-retention/test_retain.py
+          python .rollback-retention/retain.py --check
       - name: Upload exact allowlisted bytes to the existing unpublished drafts
         env:
           GH_TOKEN: ${{ github.token }}
