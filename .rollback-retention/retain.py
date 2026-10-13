@@ -77,6 +77,34 @@ def source_files(revision):
     )
 
 
+def tracked_tar_entries(data, prefix):
+    entries = {}
+    with tarfile.open(fileobj=io.BytesIO(data)) as archive:
+        for member in archive:
+            if member.isdir():
+                continue
+            path = PurePosixPath(member.name)
+            require(
+                not path.is_absolute()
+                and ".." not in path.parts
+                and member.name.startswith(prefix),
+                "unsafe tracked archive path",
+            )
+            name = member.name.removeprefix(prefix)
+            require(name not in entries, "duplicate tracked archive entry")
+            if member.isfile():
+                entries[name] = {
+                    "kind": "file",
+                    "executable": bool(member.mode & 0o111),
+                    "bytes": archive.extractfile(member).read(),
+                }
+            elif member.issym():
+                entries[name] = {"kind": "symlink", "target": member.linkname}
+            else:
+                raise ValueError("unexpected tracked archive entry kind")
+    return entries
+
+
 def zip_members(path):
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
@@ -90,8 +118,18 @@ def zip_members(path):
 
 
 def check_python(root, source):
+    archive_bytes = (root / "yamaa-reference-845a91ff.tar.gz").read_bytes()
+    expected_entries = tracked_tar_entries(
+        subprocess.check_output(["git", "archive", "--prefix=source/", PYTHON_SOURCE]),
+        "source/",
+    )
+    require(
+        tracked_tar_entries(archive_bytes, "yamaa-reference-845a91ff/")
+        == expected_entries,
+        "prior repository archive entry kind/target/mode differs from exact source",
+    )
     prior = tar_members(
-        (root / "yamaa-reference-845a91ff.tar.gz").read_bytes(),
+        archive_bytes,
         "yamaa-reference-845a91ff/",
     )
     require(prior == source, "prior repository archive differs from exact source")
@@ -389,12 +427,28 @@ def verify_r_history():
         asset["name"]: asset["id"] for asset in artifacts if asset["name"] in expected
     }
     require(actual == expected, "R canonical rehearsal artifact set differs")
+    original_zip = github(
+        f"/repos/{REPOSITORY}/actions/artifacts/11811851297/zip", binary=True
+    )
+    members = zip_members(io.BytesIO(original_zip))
+    archives = [
+        name for name in members if PurePosixPath(name).name == "yamaa_0.3.0.tar.gz"
+    ]
+    require(
+        len(archives) == 1,
+        "original R artifact does not contain exactly one source archive",
+    )
+    require(
+        members[archives[0]] == (ROOT / "payload/r/yamaa_0.3.0.tar.gz").read_bytes(),
+        "original R artifact source archive bytes differ from retained payload",
+    )
     return {
         "source_run": 38394553441,
         "source_artifact": 11811851297,
         "canonical_rehearsal_run": 38435902670,
         "canonical_rehearsal_artifacts": expected,
         "identity": "pass",
+        "original_artifact_source_archive_bytes_equal": True,
     }
 
 

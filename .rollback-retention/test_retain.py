@@ -1,7 +1,11 @@
 """Mutation controls for draft identity and source admission; no network access."""
 
 import copy
+import io
+import tarfile
+import tempfile
 import unittest
+from pathlib import Path
 
 import retain
 
@@ -63,6 +67,60 @@ class DraftAdmissionTests(unittest.TestCase):
         changed["rust/crates/yamaa-core/src/lib.rs"] += b"\n// altered source\n"
         with self.assertRaisesRegex(ValueError, "R package source differs"):
             retain.check_r(retain.ROOT / "payload/r", changed)
+
+    def test_changed_symlink_target_kind_or_executable_flag_is_refused(self):
+        original = retain.ROOT / "payload/python"
+        source = retain.source_files(retain.PYTHON_SOURCE)
+        for mutation in ("symlink_target", "symlink_kind", "executable_flag"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                root = Path(directory)
+                target = root / "yamaa-reference-845a91ff.tar.gz"
+                changed = False
+                with (
+                    tarfile.open(original / target.name) as before,
+                    tarfile.open(target, "w:gz") as after,
+                ):
+                    for member in before:
+                        value = (
+                            before.extractfile(member).read()
+                            if member.isfile()
+                            else None
+                        )
+                        entry = copy.copy(member)
+                        if (
+                            not changed
+                            and mutation == "executable_flag"
+                            and member.isfile()
+                            and member.mode & 0o111
+                        ):
+                            entry.mode &= ~0o111
+                            changed = True
+                        elif (
+                            not changed
+                            and mutation.startswith("symlink")
+                            and member.issym()
+                        ):
+                            if mutation == "symlink_target":
+                                entry.linkname += ".wrong"
+                            else:
+                                entry.type = tarfile.REGTYPE
+                                entry.linkname = ""
+                                entry.size = 0
+                                value = b""
+                            changed = True
+                        after.addfile(
+                            entry, io.BytesIO(value) if value is not None else None
+                        )
+                self.assertTrue(
+                    changed, "prior source lacks the selected tracked-entry witness"
+                )
+                with self.assertRaisesRegex(
+                    ValueError, "archive entry kind/target/mode differs"
+                ):
+                    retain.check_python(root, source)
 
 
 if __name__ == "__main__":
