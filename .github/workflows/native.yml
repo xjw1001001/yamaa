@@ -3,6 +3,15 @@ name: Native installation prototype
 on:
   # Qualify a reviewed branch's complete installed matrix before issue closure.
   workflow_dispatch:
+    inputs:
+      performance_native_run_id:
+        description: Optional completed package run for isolated performance collection
+        default: ''
+        type: string
+      performance_purpose:
+        default: capacity-frontier
+        type: choice
+        options: [capacity-frontier, characterization]
   push:
     branches: [main]
     paths:
@@ -50,6 +59,16 @@ env:
   NATIVE_BUILD_PYTHON: '3.14'
 
 jobs:
+  performance-evidence:
+    if: github.event_name == 'workflow_dispatch' && inputs.performance_native_run_id != ''
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/performance.yml
+    with:
+      native_run_id: ${{ inputs.performance_native_run_id }}
+      purpose: ${{ inputs.performance_purpose }}
+
   plan:
     name: native-coverage
     runs-on: ubuntu-24.04
