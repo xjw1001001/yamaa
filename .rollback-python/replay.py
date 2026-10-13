@@ -84,6 +84,7 @@ def github(path, binary=False):
             "Accept": "application/octet-stream" if binary else "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
         },
+        method="GET",
     )
     try:
         with urllib.request.build_opener(StripRedirectCredentials()).open(

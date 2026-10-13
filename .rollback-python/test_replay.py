@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
 import audit
 import polars as pl
@@ -257,6 +258,21 @@ class PriorRollbackAdmissions(unittest.TestCase):
         request = urllib.request.Request("https://api.github.com/asset", headers={"Authorization": "Bearer unit-token"})
         redirected = replay.StripRedirectCredentials().redirect_request(request, None, 302, "", {}, "https://storage.example/asset")
         self.assertIsNone(redirected.get_header("Authorization"))
+
+    def test_draft_access_credential_is_used_only_for_get(self):
+        opener = mock.MagicMock()
+        opener.open.return_value.__enter__.return_value.read.return_value = b"retained bytes"
+        with mock.patch.dict("os.environ", {"GH_TOKEN": "unit-token"}), mock.patch(
+            "urllib.request.build_opener", return_value=opener
+        ):
+            self.assertEqual(
+                replay.github(f"/repos/{replay.REPOSITORY}/releases/assets/637944563", binary=True),
+                b"retained bytes",
+            )
+        request = opener.open.call_args.args[0]
+        self.assertEqual(request.get_method(), "GET")
+        self.assertIsNone(request.data)
+        self.assertEqual(request.get_header("Accept"), "application/octet-stream")
 
 
 if __name__ == "__main__":

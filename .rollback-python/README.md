@@ -7,6 +7,10 @@ The source is the prior `yamaa-py-0.3.0` tag, exact commit
 retention draft 411980272, `yamaa-py-reference-845a91ff`. Every GET first checks
 the draft's target, each asset ID/name/size and uploaded state. Redirects remove
 credentials on a host change; signed URLs and credentials are never logged.
+GitHub requires repository push access to read unpublished draft metadata/assets.
+The three job definitions therefore use job-only `contents: write`; retrieval
+explicitly makes GET requests only. Checkout does not persist credentials, and
+the workflow contains no release mutation or publication operation.
 
 The Linux wheel is the exact retained source-built baseline asset 637944633.
 macOS arm64 and Windows x64 wheels are built from installable prior source asset

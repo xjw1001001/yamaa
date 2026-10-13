@@ -19,7 +19,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     permissions:
-      contents: read
+      # GitHub requires repository push access to read unpublished draft assets.
+      # The retrieval script makes GET requests only, without release mutations.
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -66,7 +68,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     permissions:
-      contents: read
+      # Needed for GET access to the existing unpublished retention draft.
+      contents: write
       actions: read
     strategy:
       fail-fast: false
@@ -143,7 +146,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: read
+      # Needed for GET access to the existing unpublished retention draft.
+      contents: write
       actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
