@@ -349,13 +349,12 @@ class StripRedirectCredentials(urllib.request.HTTPRedirectHandler):
         return redirected
 
 
-def github(path, *, data=None, binary=False, upload=False):
+def github(path, *, data=None, binary=False, upload=False, accept=None):
     host = "uploads.github.com" if upload else "api.github.com"
     headers = {
         "Authorization": "Bearer " + os.environ["GH_TOKEN"],
-        "Accept": "application/octet-stream"
-        if binary
-        else "application/vnd.github+json",
+        "Accept": accept
+        or ("application/octet-stream" if binary else "application/vnd.github+json"),
         "X-GitHub-Api-Version": "2022-11-28",
     }
     if data is not None:
@@ -428,7 +427,9 @@ def verify_r_history():
     }
     require(actual == expected, "R canonical rehearsal artifact set differs")
     original_zip = github(
-        f"/repos/{REPOSITORY}/actions/artifacts/11811851297/zip", binary=True
+        f"/repos/{REPOSITORY}/actions/artifacts/11811851297/zip",
+        binary=True,
+        accept="application/vnd.github+json",
     )
     members = zip_members(io.BytesIO(original_zip))
     archives = [
