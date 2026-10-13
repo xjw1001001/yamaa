@@ -1,0 +1,176 @@
+name: Replay retained prior Python rollback packages
+
+on:
+  push:
+    branches: [migration/prior-python-rollback]
+
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RUSTUP_TOOLCHAIN: 1.90.0
+
+jobs:
+  wheel:
+    name: prior-wheel (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-latest]
+    steps:
+      - name: Preserve tracked fixture bytes and symlinks on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Install the prior source build backend and Rust toolchain
+        if: matrix.os != 'ubuntu-24.04'
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          python -m pip install maturin==1.9.6
+      - name: Retrieve the exact assets from the existing unpublished Python draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .rollback-python/replay.py download --assets "${RUNNER_TEMP}/prior-rollback/assets"
+      - name: Retain the Linux wheel or build a prior abi3 wheel on this platform
+        run: >-
+          python .rollback-python/replay.py build
+          --assets "${RUNNER_TEMP}/prior-rollback/assets"
+          --output "${RUNNER_TEMP}/prior-rollback/wheel"
+          --os "${{ matrix.os }}" --python 3.12 --role platform-wheel
+      - name: Preserve the prior wheel and exact build provenance
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: prior-wheel-${{ matrix.os }}
+          path: ${{ runner.temp }}/prior-rollback/wheel
+          if-no-files-found: warn
+
+  reinstall:
+    name: prior-reinstall (${{ matrix.os }}, ${{ matrix.python }}, ${{ matrix.form }})
+    needs: wheel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-latest]
+        python: ['3.12', '3.13', '3.14']
+        form: [wheel, source]
+    steps:
+      - name: Preserve tracked fixture bytes and symlinks on Windows
+        if: runner.os == 'Windows'
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Retrieve the exact prior draft assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .rollback-python/replay.py download --assets "${RUNNER_TEMP}/prior-rollback/assets"
+      - name: Retrieve this platform's prior abi3 wheel
+        if: matrix.form == 'wheel'
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: prior-wheel-${{ matrix.os }}
+          path: ${{ runner.temp }}/prior-rollback/wheel
+      - name: Independently rebuild the exact prior source package for this interpreter
+        if: matrix.form == 'source'
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          python -m pip install maturin==1.9.6
+          python .rollback-python/replay.py build --assets "${RUNNER_TEMP}/prior-rollback/assets" --output "${RUNNER_TEMP}/prior-rollback/wheel" --os "${{ matrix.os }}" --python "${{ matrix.python }}" --role independent-source-rebuild
+      - name: Install exact prior dependencies and the owned wheel in a fresh environment
+        run: |
+          python -m venv "${RUNNER_TEMP}/prior-package-env"
+          if [ "${RUNNER_OS}" = Windows ]; then
+            prior_python="${RUNNER_TEMP}/prior-package-env/Scripts/python.exe"
+          else
+            prior_python="${RUNNER_TEMP}/prior-package-env/bin/python"
+          fi
+          "$prior_python" -m pip install --no-cache-dir --no-deps -r "${RUNNER_TEMP}/prior-rollback/assets/baseline-dependencies.txt"
+          "$prior_python" -m pip install --no-cache-dir --no-deps "${RUNNER_TEMP}"/prior-rollback/wheel/*.whl
+      - name: Verify versions before study data and replay six held Saves outside the checkout
+        run: |
+          if [ "${RUNNER_OS}" = Windows ]; then
+            prior_python="${RUNNER_TEMP}/prior-package-env/Scripts/python.exe"
+          else
+            prior_python="${RUNNER_TEMP}/prior-package-env/bin/python"
+          fi
+          cd "${RUNNER_TEMP}"
+          "$prior_python" "${GITHUB_WORKSPACE}/.rollback-python/replay.py" replay --assets "${RUNNER_TEMP}/prior-rollback/assets" --wheel-root "${RUNNER_TEMP}/prior-rollback/wheel" --proof "${RUNNER_TEMP}/prior-rollback/proof" --os "${{ matrix.os }}" --python "${{ matrix.python }}" --form "${{ matrix.form }}"
+      - name: Preserve exact installed identity, raw tables and independently authored Save bytes
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: prior-rollback-${{ matrix.os }}-${{ matrix.python }}-${{ matrix.form }}
+          path: ${{ runner.temp }}/prior-rollback/proof
+          if-no-files-found: warn
+      - name: Preserve a failed independent source build log
+        if: ${{ failure() && matrix.form == 'source' }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: prior-build-failure-${{ matrix.os }}-${{ matrix.python }}
+          path: ${{ runner.temp }}/prior-rollback/wheel/build.log
+          if-no-files-found: warn
+
+  audit:
+    name: prior-rollback-complete-evidence
+    needs: [wheel, reinstall]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - name: Retrieve the exact retained prior source and locks for independent audit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .rollback-python/replay.py download --assets "${RUNNER_TEMP}/prior-rollback/assets"
+      - name: Install the retained dependency versions for raw Arrow admission
+        run: python -m pip install --no-cache-dir --no-deps -r "${RUNNER_TEMP}/prior-rollback/assets/baseline-dependencies.txt"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: prior-*
+          path: ${{ runner.temp }}/prior-rollback/artifacts
+      - name: Refuse missing lanes, changed source identities, mismatched ownership and altered Save bytes
+        run: |
+          python .rollback-python/test_replay.py
+          python .rollback-python/audit.py --assets "${RUNNER_TEMP}/prior-rollback/assets" --artifacts "${RUNNER_TEMP}/prior-rollback/artifacts" --output "${RUNNER_TEMP}/prior-rollback/summary.json"
+      - name: Preserve the complete rollback audit receipt
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: prior-python-rollback-summary
+          path: ${{ runner.temp }}/prior-rollback/summary.json
+          if-no-files-found: warn
