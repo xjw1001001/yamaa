@@ -14,8 +14,9 @@ observations <- function(result) rawToChar(observations_native(result))
 
 qualify_unavailable_environment_root <- function() {
   previous <- getwd(); on.exit(setwd(previous))
-  work <- tempfile("environment-root-"); dir.create(work); setwd(work)
+  work <- tempfile("environment-root-"); dir.create(work)
   base <- normalizePath(work, winslash = "/", mustWork = TRUE)
+  setwd(base)
   for (name in "missing-environment.yaml") {
     cause <- "missing"
     expected <- list(phase = "validation", condition = "project_environment_missing",
@@ -28,8 +29,7 @@ qualify_unavailable_environment_root <- function() {
       failed <- yamaa_domain("spec.yaml", environment = name)
       for (actual in list(checked$issues, failed$issues)) {
         if (!identical(lapply(actual, identity), expected)) {
-          dput(list(work = work, cwd = getwd(), base = base,
-            expected = expected, actual = lapply(actual, identity)))
+          dput(list(expected = expected, actual = lapply(actual, identity)))
           stop("public missing environment issue differs from the exact authored tuple")
         }
       }
