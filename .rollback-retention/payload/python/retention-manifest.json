@@ -1,0 +1,36 @@
+{
+  "status": "draft release created; publication pending root review",
+  "source_tag": "yamaa-py-0.3.0",
+  "source_revision": "845a91ff9ba4ab6599efbd79fafe1c4e1dd14255",
+  "package_version": "0.3.0",
+  "wheel_name": "yamaa-0.3.0-cp312-abi3-linux_x86_64.whl",
+  "source_archive_name": "yamaa-reference-845a91ff.tar.gz",
+  "association": "source-built prior release; release tag has no published package assets and registry version is unavailable",
+  "runtime_version": "3.12.14",
+  "toolchain": "Rust 1.90.0, locked source build",
+  "platform_form": "Linux x86_64 wheel",
+  "bytes": {
+    "yamaa-reference-845a91ff.tar.gz": 5444762,
+    "yamaa-0.3.0-cp312-abi3-linux_x86_64.whl": 6978344,
+    "uv.lock": 556719,
+    "yamaa-0.3.0.tar.gz": 1909336
+  },
+  "prior_archive_and_wheel_bytes_equal": true,
+  "reinstall": "pass; fresh isolated Linux x86_64 CPython 3.12.14 wheel installation",
+  "remaining_scope": [
+    "other Python platform/interpreter/form rollback tuples",
+    "full producer graph Save baseline",
+    "durable asset publication and exact retrievable study pin",
+    "transition approval"
+  ],
+  "reinstall_receipt": "reinstall-proof/receipt.json",
+  "installed_wheel_members_compared": 135,
+  "installable_source_distribution": "yamaa-0.3.0.tar.gz",
+  "expected_source_pin": "https://github.com/elong0527/yamaa/releases/download/yamaa-py-reference-845a91ff/yamaa-0.3.0.tar.gz",
+  "source_package_receipt": "source-package-receipt.json",
+  "source_rebuild_reinstall": "pass; isolated CPython 3.12.14 Linux x86_64 with exact retained sdist",
+  "source_rebuild_receipt": "source-reinstall-proof/receipt.json",
+  "draft_release_id": 411980272,
+  "draft_tag_name": "yamaa-py-reference-845a91ff",
+  "publication": "unpublished draft; root review required"
+}

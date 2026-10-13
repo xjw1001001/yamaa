@@ -1,0 +1,19 @@
+{
+  "status": "draft release created; publication pending root review",
+  "source_revision": "a1a9c2d216075f331ac108aa4d3638573f103cea",
+  "tag_name": "yamaa-r-reference-a1a9c2d2",
+  "package_version": "0.3.0",
+  "asset_name": "yamaa_0.3.0.tar.gz",
+  "asset_bytes": 3290128,
+  "prior_artifact_id": 11811851297,
+  "prior_artifact_reference": "github-actions:38394553441/attempt-1/native-r-ubuntu-24.04/yamaa_0.3.0.tar.gz",
+  "prior_archive_bytes_equal": true,
+  "expected_durable_url": "https://github.com/elong0527/yamaa/releases/download/yamaa-r-reference-a1a9c2d2/yamaa_0.3.0.tar.gz",
+  "canonical_three_platform_rehearsal": "pass",
+  "publication": "unpublished draft; root review required",
+  "canonical_rehearsal_run": 38435902670,
+  "canonical_rehearsal_preparation_head": "d909928c94f308550c7f584c12b6b42506c4c84c",
+  "canonical_rehearsal_receipt": "/workspace/scratch/r-rollback-38435902670/rehearsal-summary.json",
+  "draft_release_id": 411979803,
+  "draft_tag_name": "yamaa-r-reference-a1a9c2d2"
+}
