@@ -1,0 +1,78 @@
+name: Windows R physical fixture feedback
+
+on:
+  push:
+    branches: [migration/r-windows-physical-feedback]
+
+permissions:
+  contents: read
+
+jobs:
+  installed-physical-controls:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      RUSTUP_TOOLCHAIN: '1.90.0'
+    steps:
+      - name: Preserve authored bytes and symlinks
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.symlinks true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: '4.6.1'
+          rtools-version: '45'
+          use-public-rspm: true
+      - name: Install locked source build tools
+        run: |
+          python -m pip install py-yaml12==0.2.0
+          rustup toolchain install 1.90.0 --profile minimal
+          rustup target add --toolchain 1.90.0 x86_64-pc-windows-gnu
+      - name: Stage standalone R source package
+        run: python rust/tools/stage_r_package.py "${RUNNER_TEMP}/physical-stage/yamaa"
+      - name: Build and install outside checkout
+        working-directory: ${{ runner.temp }}
+        env:
+          R_LIBS: ${{ runner.temp }}/physical-r-library
+        run: |
+          mkdir physical-r-library
+          R CMD build --no-build-vignettes --no-manual physical-stage/yamaa
+          python "${GITHUB_WORKSPACE}/rust/tools/check_cargo_lock.py" yamaa_0.3.0.tar.gz
+          R CMD INSTALL --library="${RUNNER_TEMP}/physical-r-library" "${GITHUB_WORKSPACE}/rust/tests/project-programs/r"
+          R CMD INSTALL --library="${RUNNER_TEMP}/physical-r-library" yamaa_0.3.0.tar.gz
+          cp "${GITHUB_WORKSPACE}/R/yamaa/tests/public_environment.R" public_environment.R
+          cp "${GITHUB_WORKSPACE}/R/yamaa/tests/public_file_resources.R" public_file_resources.R
+          git -C "${GITHUB_WORKSPACE}" rev-parse HEAD > source-revision.txt
+          Rscript --vanilla -e 'print(sessionInfo()); print(packageVersion("yamaa"))' > installed-owner.txt
+      - name: Replay complete public environment controls
+        working-directory: ${{ runner.temp }}
+        env:
+          R_LIBS: ${{ runner.temp }}/physical-r-library
+        run: Rscript --vanilla public_environment.R 2>&1 | tee public-environment.log
+      - name: Replay complete public file-resource controls
+        if: ${{ always() }}
+        working-directory: ${{ runner.temp }}
+        env:
+          R_LIBS: ${{ runner.temp }}/physical-r-library
+        run: Rscript --vanilla public_file_resources.R 2>&1 | tee public-file-resources.log
+      - name: Retain source and exact installed evidence
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: windows-r-physical-feedback
+          path: |
+            ${{ runner.temp }}/public-environment.log
+            ${{ runner.temp }}/public-file-resources.log
+            ${{ runner.temp }}/installed-owner.txt
+            ${{ runner.temp }}/source-revision.txt
+            ${{ runner.temp }}/yamaa_0.3.0.tar.gz
+          if-no-files-found: warn

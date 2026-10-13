@@ -26,8 +26,14 @@ qualify_unavailable_environment_root <- function() {
       if (!is.null(content)) writeLines(content, "spec.yaml")
       checked <- yamaa_check("spec.yaml", environment = name)
       failed <- yamaa_domain("spec.yaml", environment = name)
-      stopifnot(identical(lapply(checked$issues, identity), expected),
-        identical(lapply(failed$issues, identity), expected), is.null(failed$output),
+      for (actual in list(checked$issues, failed$issues)) {
+        if (!identical(lapply(actual, identity), expected)) {
+          dput(list(work = work, cwd = getwd(), base = base,
+            expected = expected, actual = lapply(actual, identity)))
+          stop("public missing environment issue differs from the exact authored tuple")
+        }
+      }
+      stopifnot(is.null(failed$output),
         inherits(tryCatch(failed$save(), error = identity), "yamaa_domain_error"))
       # Preparation refused before a native attempt/report exists.
       stopifnot(is.null(observations_native(failed)))
