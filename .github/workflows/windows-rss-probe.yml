@@ -1,0 +1,33 @@
+name: Windows RSS process probe
+
+on:
+  push:
+    branches: [probe/windows-rss-identity]
+    paths:
+      - '.github/workflows/windows-rss-probe.yml'
+      - '.github/scripts/ci/windows_rss_probe.py'
+
+permissions:
+  contents: read
+
+jobs:
+  identity:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Create an isolated uv virtual environment
+        run: |
+          python -m pip install uv==0.11.6
+          uv venv --python 3.14 "$env:RUNNER_TEMP\rss-probe-venv"
+      - name: Compare launched process and actual interpreter ownership
+        run: |
+          & "$env:RUNNER_TEMP\rss-probe-venv\Scripts\python.exe" -I .github/scripts/ci/windows_rss_probe.py
