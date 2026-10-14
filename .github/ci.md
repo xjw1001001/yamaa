@@ -94,6 +94,9 @@ The shared-crates step also runs
 Rust platform on main and qualification pushes. This enables the engine's
 feature-gated preparation and port tests and the explicit `test_support`
 integration boundary, which a plain default-feature test invocation omits.
+It also explicitly enables `arrow-c-data` for the adapters' `c_data_table`
+integration binary, so the reviewed Arrow C stream ownership and boundary
+controls run on every selected Rust platform.
 
 Scripts locate repository data relative to their own files, so they can also
 run locally from any working directory. Keep tests and shared helpers beside
@@ -119,6 +122,9 @@ conclusion as a pass. The small `native-run-audit-record` artifact separately
 retains the verdicts and source/run/job/artifact metadata for review; independent
 replay still requires the canonical files and original artifact bytes retained in
 the full audit. Both records distinguish combined-main from reviewed-branch scope.
+The job also independently replays the original `input` directory without Actions
+credentials in a fresh process, requires its complete verdict and exact JSON
+agreement, and retains the second record under `replay/` in both audit artifacts.
 The audit installs independent report and artifact readers from `python/uv.lock`
 without installing the candidate engine. Missing readers stay explicit missing
 evidence and cannot produce a complete audit.
