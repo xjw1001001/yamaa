@@ -167,21 +167,25 @@ fn different_large_integer_keys_are_never_rounded_or_collapsed() {
 
 #[test]
 fn numeric_and_nonfinite_duplicate_identity_is_shared_with_core() {
-    for (left, right) in [
-        ("true", "1"),
-        ("false", "-0.0"),
-        ("1", "1.0"),
-        ("1", "01"),
-        ("0x10", "16"),
-        ("null", ".nan"),
-        (".inf", "1e9999"),
-        ("18446744073709551616", "18446744073709551616.0"),
+    for (left, right, label) in [
+        ("true", "1", "1"),
+        ("false", "-0.0", "-0.0"),
+        ("1", "1.0", "1.0"),
+        ("1", "01", "1"),
+        ("0x10", "16", "16"),
+        ("null", ".nan", "None"),
+        (".inf", "1e9999", "None"),
+        (
+            "18446744073709551616",
+            "18446744073709551616.0",
+            "1.8446744073709552e+19",
+        ),
     ] {
         yaml_error(
             &format!("{left}: a\n{right}: b\n"),
             2,
             1,
-            "while constructing a mapping",
+            &format!("found duplicate key '{label}'"),
         );
     }
     assert!(decode_yaml(b"{'1': a, 1: b, .5: c, -.5: d}", DecodeLimits::default()).is_ok());
@@ -240,8 +244,8 @@ fn forbidden_metadata_reports_its_prefix_and_precedes_later_errors() {
 fn merge_key_style_and_non_scalar_keys_are_checked() {
     yaml_error("x: {<<: 1}\n", 1, 5, "YAML merge keys are not allowed");
     assert!(decode_yaml(b"x: {'<<': 1}\ny: <<\n", DecodeLimits::default()).is_ok());
-    yaml_error("? [a]\n: 1\n", 1, 3, "while constructing a mapping");
-    yaml_error("? {a: 1}\n: 2\n", 1, 3, "while constructing a mapping");
+    yaml_error("? [a]\n: 1\n", 1, 3, "a mapping key must be a scalar");
+    yaml_error("? {a: 1}\n: 2\n", 1, 3, "a mapping key must be a scalar");
 }
 
 #[test]
@@ -250,13 +254,13 @@ fn deferred_mapping_error_order_matches_reference_construction() {
         "a:\n  x: 1\n  x: 2\na: 3\n",
         4,
         1,
-        "while constructing a mapping",
+        "found duplicate key 'a'",
     );
     yaml_error(
         "- child:\n    x: 1\n    x: 2\n- y: 1\n  y: 2\n",
         5,
         3,
-        "while constructing a mapping",
+        "found duplicate key 'y'",
     );
     yaml_error(
         "a: 1\na: 2\n<<: 3\n",
@@ -268,16 +272,48 @@ fn deferred_mapping_error_order_matches_reference_construction() {
         "x: \"\\uD800\"\ny: 1\ny: 2\n",
         3,
         1,
-        "while constructing a mapping",
+        "found duplicate key 'y'",
     );
     yaml_error(
         "\"\\uD800\": 1\n\"\\U0000D800\": 2\n",
         2,
         1,
-        "while constructing a mapping",
+        "found duplicate key '\\ud800'",
     );
     assert!(
-        matches!(error("{a: 1, a: 2, z: [}"), DecodeFailure::InvalidYaml { reason, .. } if reason != "while constructing a mapping")
+        matches!(error("{a: 1, a: 2, z: [}"), DecodeFailure::InvalidYaml { reason, .. } if !reason.starts_with("found duplicate key"))
+    );
+}
+
+#[test]
+fn duplicate_key_reason_names_the_scalar_in_block_and_flow_mappings() {
+    yaml_error("F: Female\nF: Other\n", 2, 1, "found duplicate key 'F'");
+    yaml_error(
+        "{F: Female, M: Male, F: Other}",
+        1,
+        22,
+        "found duplicate key 'F'",
+    );
+    yaml_error(
+        "{'a\\b': 1, 'a\\b': 2}",
+        1,
+        12,
+        "found duplicate key 'a\\\\b'",
+    );
+}
+
+#[test]
+fn duplicate_key_reason_obeys_the_diagnostic_budget() {
+    assert_eq!(
+        decode_yaml(
+            b"{long_key: 1, long_key: 2}",
+            DecodeLimits {
+                diagnostic_bytes: 1,
+                ..DecodeLimits::default()
+            }
+        )
+        .unwrap_err(),
+        DecodeFailure::Limit("diagnostic_bytes")
     );
 }
 
