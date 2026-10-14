@@ -785,6 +785,8 @@ def launch(command, child):
                   "--command", json.dumps(command), "--record", str(child / "process.json")]
         if request["host"] == "python":
             broker.append("--python-worker")
+        elif request["host"] == "r":
+            broker.append("--r-worker")
         process = subprocess.Popen(
             broker, cwd=child, env=environment, stdout=out, stderr=err
         )

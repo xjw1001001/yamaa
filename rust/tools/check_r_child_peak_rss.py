@@ -76,7 +76,7 @@ def check(args):
     process_path = args.output / "process.json"
     command = [str(args.rscript), "--vanilla", str(script), str(response_path)]
     broker = [sys.executable, "-I", str(Path(child_peak_rss.__file__)),
-              "--command", json.dumps(command), "--record", str(process_path)]
+              "--command", json.dumps(command), "--record", str(process_path), "--r-worker"]
     # R is deliberately a plain launch: never apply Python venv redirectors.
     record = {"scope": "authored plain-R PID/RSS/exit control; no timing samples",
               "system": platform.system(), "command": command,
