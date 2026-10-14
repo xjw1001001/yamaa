@@ -42,6 +42,38 @@ jobs:
                 "authored expected:", sample[4], "equal:", identical(actual,sample[4]), "\n")
           }
           cat("Direct original-helper reproduction only; not installed facade or release qualification\n")
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: 5cfcffe919f27e72acbb0b10444110b23fd52458
+          path: repair-source
+          persist-credentials: false
+      - name: Install the declared private R checkpoint codec
+        shell: Rscript {0}
+        run: |
+          private <- file.path(Sys.getenv("RUNNER_TEMP"), "checkpoint-jsonlite-library")
+          dir.create(private, recursive=TRUE, showWarnings=FALSE)
+          package <- tempfile(fileext=".tar.gz")
+          download.file("https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_2.0.0.tar.gz",
+                        package, mode="wb", quiet=TRUE)
+          install.packages(package, repos=NULL, type="source", lib=private)
+          stopifnot(as.character(utils::packageVersion("jsonlite", lib.loc=private)) == "2.0.0")
+          cat(paste0("R_LIBS_USER=",private,"\n"), file=Sys.getenv("GITHUB_ENV"), append=TRUE)
+          cat("Actual private checkpoint codec:", private, "jsonlite2.0.0\n")
+      - name: Verify all three actual R checkpoint controls on repair source
+        run: |
+          python - <<'PY'
+          import sys
+          import unittest
+          print('Actual checkpoint source5cfcffe9; interpreter', sys.version)
+          suite = unittest.defaultTestLoader.discover(
+              'repair-source/rust/tests', pattern='test_public_lifecycle_view_retention.py')
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          assert result.testsRun == 3 and not result.skipped, 'Actual R controls may not skip'
+          raise SystemExit(not result.wasSuccessful())
+          PY
   inspect-original:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
