@@ -22,7 +22,7 @@ jobs:
           python - <<'PY'
           import json, subprocess
           from pathlib import Path
-          reviewed = [{"id":38509335925,"sha":"7101f20656d345ef9985d41522051ae84266730d","branch":"codex/migration-issue-2144","status":"queued"},{"id":38508902215,"sha":"1a0520ee42d1116b8bd576edc5fb2c92a3efc34a","branch":"codex/migration-issue-2147","status":"queued"},{"id":38507542592,"sha":"a33b255438f58a8abaf9763a0f70fc20d9909835","branch":"codex/migration-issue-2143","status":"queued"},{"id":38507430920,"sha":"4e2e9fa4a7df52f2914b12288c9989ad416873db","branch":"codex/migration-issue-2145","status":"queued"},{"id":38506319813,"sha":"b4cf84e7d78cf2191b81ceb65ad22f7c32509a97","branch":"qualification/issue-2141","status":"queued"},{"id":38505411132,"sha":"b4cf84e7d78cf2191b81ceb65ad22f7c32509a97","branch":"codex/migration-issue-2141","status":"queued"},{"id":38503894937,"sha":"1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0","branch":"qualification/issue-2142","status":"queued"},{"id":38503400832,"sha":"d8cb226a613f0ee26cac400e2baeecbbf2ba11cd","branch":"main","status":"queued"}]
+          reviewed = [{"id":38510437068,"sha":"b2646c0279ce6a248839b1b3718af9eea607dc5a","branch":"qualification/issue-2145-windows-controls","status":"queued"}]
           repository = 'elong0527/yamaa'
           root = Path('superseded-native-records')
           root.mkdir()
