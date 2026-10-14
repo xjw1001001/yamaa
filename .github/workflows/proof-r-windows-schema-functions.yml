@@ -56,8 +56,15 @@ jobs:
           private <- file.path(Sys.getenv("RUNNER_TEMP"), "checkpoint-jsonlite-library")
           dir.create(private, recursive=TRUE, showWarnings=FALSE)
           package <- tempfile(fileext=".tar.gz")
-          download.file("https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_2.0.0.tar.gz",
-                        package, mode="wb", quiet=TRUE)
+          urls <- c("https://cran.r-project.org/src/contrib/jsonlite_2.0.0.tar.gz",
+                    "https://cran.r-project.org/src/contrib/Archive/jsonlite/jsonlite_2.0.0.tar.gz")
+          downloaded <- FALSE
+          for (url in urls) {
+            downloaded <- tryCatch(download.file(url, package, mode="wb", quiet=TRUE) == 0L,
+                                   error=function(error) FALSE)
+            if (downloaded) break
+          }
+          stopifnot(downloaded)
           install.packages(package, repos=NULL, type="source", lib=private)
           stopifnot(as.character(utils::packageVersion("jsonlite", lib.loc=private)) == "2.0.0")
           cat(paste0("R_LIBS_USER=",private,"\n"), file=Sys.getenv("GITHUB_ENV"), append=TRUE)
