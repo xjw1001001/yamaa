@@ -1,0 +1,106 @@
+name: Inspect original Windows R conformance mismatch
+
+on:
+  push:
+    branches: [proof/r-windows-schema-functions-38544446840]
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  inspect-original:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Admit the exact original artifact and producing job
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/11883757873" > original-artifact.json
+          gh api "repos/${GITHUB_REPOSITORY}/actions/jobs/115787138907" > original-job.json
+          python - <<'PY'
+          import datetime
+          import json
+          from pathlib import Path
+          artifact = json.loads(Path('original-artifact.json').read_bytes())
+          job = json.loads(Path('original-job.json').read_bytes())
+          source = 'ae799a5e96cb97c94dc123324e339616e36f769e'
+          assert artifact['id'] == 11883757873
+          assert artifact['name'] == 'public-conformance-r-windows-latest'
+          assert artifact['size_in_bytes'] == 701010 and artifact['expired'] is False
+          assert artifact['workflow_run']['id'] == 38544446840
+          assert artifact['workflow_run']['head_sha'] == source
+          assert job['id'] == 115787138907 and job['run_id'] == 38544446840
+          assert job['head_sha'] == source and job['name'] == 'native-r (windows-latest)'
+          assert job['status'] == 'completed' and job['conclusion'] == 'failure'
+          parse = lambda text: datetime.datetime.fromisoformat(text.replace('Z', '+00:00'))
+          assert parse(job['started_at']) <= parse(artifact['created_at']) <= parse(job['completed_at'])
+          print('Admitted original artifact ID/run/job/source and producing interval; diagnostic only')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ae799a5e96cb97c94dc123324e339616e36f769e
+          path: original-source
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: '11883757873'
+          run-id: 38544446840
+          github-token: ${{ github.token }}
+          path: original-conformance
+          merge-multiple: true
+      - name: Read original case observations without executing either runtime
+        run: |
+          python - <<'PY' | tee original-mismatch-observations.txt
+          import json
+          from pathlib import Path
+          root = Path('original-conformance')
+          expected = Path('original-source/benchmarks/schema-functions/expected/test.csv').read_bytes()
+          print('ORIGINAL AUTHORED EXPECTED CSV', json.dumps(expected.decode('utf-8'), ensure_ascii=True))
+          matched = []
+          for path in sorted(root.rglob('*')):
+              if not path.is_file():
+                  continue
+              relative = str(path.relative_to(root))
+              if 'schema-functions' in relative:
+                  matched.append(relative)
+                  if path.suffix.lower() in ('.csv', '.json', '.txt', '.yaml', '.yml'):
+                      data = path.read_bytes()
+                      assert len(data) < 1000000
+                      print('ORIGINAL CASE MEMBER', relative, json.dumps(data.decode('utf-8'), ensure_ascii=True))
+              elif path.suffix == '.json':
+                  try:
+                      value = json.loads(path.read_bytes())
+                  except (ValueError, UnicodeError):
+                      continue
+                  def inspect(value, location):
+                      if isinstance(value, dict):
+                          if 'schema-functions' in value.values():
+                              print('ORIGINAL CASE RECORD', relative, location, json.dumps(value, ensure_ascii=True))
+                          for key, child in value.items():
+                              inspect(child, location + '/' + key)
+                      elif isinstance(value, list):
+                          for index, child in enumerate(value):
+                              inspect(child, location + '/' + str(index))
+                  inspect(value, '$')
+          assert matched, 'No original schema-functions case members retained'
+          print('CASE MEMBER INVENTORY', json.dumps(matched))
+          print('No candidate was executed; no expected/raw bytes were changed; this is not qualification')
+          PY
+      - name: Preserve diagnostic observations and admitted original member bytes
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: original-windows-r-schema-functions-inspection
+          path: |
+            original-artifact.json
+            original-job.json
+            original-mismatch-observations.txt
+            original-conformance
+          if-no-files-found: error
+          overwrite: false
