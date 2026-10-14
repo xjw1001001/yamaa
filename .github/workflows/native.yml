@@ -23,7 +23,6 @@ on:
       - '.github/scripts/commands/**'
       - 'Makefile'
 
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Cancel stale branch qualification feedback; active main runs finish.
