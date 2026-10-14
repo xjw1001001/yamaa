@@ -1,0 +1,62 @@
+name: Original Windows R invocation file-kind diagnostic
+on:
+  push:
+    branches: [codex/migration-r-invocation-diagnostic]
+permissions:
+  contents: read
+jobs:
+  invocation:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: b966c8b0c432d717ebc65c85f29dbb9097efce51
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05
+        with:
+          r-version: '4.6.1'
+          rtools-version: '45'
+      - name: Retain original shell and regular-file invocation observations
+        run: |
+          python - "$(command -v Rscript)" <<'PY'
+          import json, os, platform, shutil, subprocess, sys
+          from pathlib import Path
+          sys.path.insert(0, 'rust/tools')
+          import measure_public_lifecycle as lifecycle
+          root=Path(os.environ['RUNNER_TEMP'])/'r-invocation-diagnostic'
+          root.mkdir()
+          sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          assert sha=='b966c8b0c432d717ebc65c85f29dbb9097efce51'
+          record={'scope':'original R invocation/file-kind control; no SDK, timing samples or qualification',
+              'source_revision':sha,'workflow_revision':os.environ['GITHUB_SHA'],
+              'run_id':int(os.environ['GITHUB_RUN_ID']), 'run_attempt':int(os.environ['GITHUB_RUN_ATTEMPT']),
+              'system':platform.system(),'observations':[],'accepted':False}
+          for kind, value in [('shell-command-v',sys.argv[1]),('python-shutil-which',shutil.which('Rscript'))]:
+              observed={'kind':kind,'original_path':value,'regular_file':None,'worker_invocation':None,'failure':None}
+              if value is not None:
+                  observed['regular_file']=Path(value).is_file()
+                  try:
+                      observed['worker_invocation']=str(lifecycle.worker_executable(Path(value),Path.cwd()))
+                  except Exception as error:
+                      observed['failure']={'class':type(error).__name__,'reason':str(error)}
+              record['observations'].append(observed)
+              (root/'observations.json').write_text(json.dumps(record,indent=2)+'\n',encoding='utf-8')
+          assert record['observations'][1]['regular_file'] is True
+          assert record['observations'][1]['failure'] is None
+          PY
+      - name: Retain every original file-kind observation or refusal
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: original-windows-r-invocation-diagnostic
+          path: ${{ runner.temp }}/r-invocation-diagnostic
+          retention-days: 90
+          if-no-files-found: error
