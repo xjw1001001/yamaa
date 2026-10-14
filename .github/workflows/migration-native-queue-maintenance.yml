@@ -22,7 +22,7 @@ jobs:
           python - <<'PY'
           import json, subprocess
           from pathlib import Path
-          reviewed = [{"id":38510437068,"sha":"b2646c0279ce6a248839b1b3718af9eea607dc5a","branch":"qualification/issue-2145-windows-controls","status":"queued"}]
+          reviewed = [{"id":38514304821,"sha":"b2646c0279ce6a248839b1b3718af9eea607dc5a","branch":"qualification/issue-2145-windows-controls-retry-1","status":"queued"}]
           repository = 'elong0527/yamaa'
           root = Path('superseded-native-records')
           root.mkdir()
