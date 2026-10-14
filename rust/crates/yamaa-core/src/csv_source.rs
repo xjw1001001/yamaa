@@ -12,8 +12,11 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Self {
-            bytes: 8_388_608,
-            fields: 1_048_576,
+            // Complete physical input is admitted, including unread fields.
+            bytes: 16 * 1024 * 1024,
+            // The installed source-cell ceiling excludes the header. Reserve
+            // one complete admitted header without clipping a valid data grid.
+            fields: 2_097_152 + crate::specification::DEFAULT_COLUMN_LIMIT,
             records: 1_048_576,
         }
     }

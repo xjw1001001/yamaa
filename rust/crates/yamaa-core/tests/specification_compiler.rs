@@ -133,6 +133,124 @@ fn source() -> TableSchema {
     .unwrap()
 }
 
+#[test]
+fn default_compiler_bounds_declared_projection_input_and_typed_widths_consistently() {
+    fn capacity_document(
+        width: usize,
+        inputs: usize,
+        typed_fields: usize,
+        projected: usize,
+    ) -> SpecificationDocument {
+        use Tree::*;
+        let names = (0..width.max(typed_fields).max(projected))
+            .map(|i| if i == 0 { "ID".into() } else { format!("F{i}") })
+            .collect::<Vec<String>>();
+        let sources = (0..inputs)
+            .map(|i| {
+                if i == 0 {
+                    "SRC".into()
+                } else {
+                    format!("S{i}")
+                }
+            })
+            .collect::<Vec<String>>();
+        let tree = Map(vec![
+            ("schema_version", Text("1.0")),
+            ("domain", Text("TEST")),
+            ("keys", List(vec![Text("ID")])),
+            (
+                "input",
+                Map(sources
+                    .iter()
+                    .map(|name| {
+                        (
+                            name.as_str(),
+                            Map(vec![
+                                ("path", Text("input.csv")),
+                                (
+                                    "types",
+                                    Map(names[..typed_fields]
+                                        .iter()
+                                        .map(|field| (field.as_str(), Text("str")))
+                                        .collect()),
+                                ),
+                            ]),
+                        )
+                    })
+                    .collect()),
+            ),
+            (
+                "columns",
+                List(
+                    names[..width]
+                        .iter()
+                        .map(|name| {
+                            Map(vec![
+                                ("name", Text(name)),
+                                ("type", Text("str")),
+                                (
+                                    "derivation",
+                                    Map(vec![(
+                                        "value",
+                                        Map(vec![(
+                                            "source",
+                                            Map(vec![("variable", Text("SRC.ID"))]),
+                                        )]),
+                                    )]),
+                                ),
+                            ])
+                        })
+                        .collect(),
+                ),
+            ),
+            (
+                "output",
+                Map(vec![
+                    ("path", Text("out.csv")),
+                    (
+                        "columns",
+                        List(names[..projected].iter().map(|name| Text(name)).collect()),
+                    ),
+                ]),
+            ),
+        ]);
+        let mut nodes = Vec::new();
+        let root = tree.append(&mut nodes);
+        SpecificationDocument::admit(
+            Document::new(nodes, root, DocumentLimits::default()).unwrap(),
+            &mut ValidationBudget::new(Default::default()),
+        )
+        .unwrap()
+        .unwrap()
+    }
+    for count in [255, 256] {
+        let prepared =
+            PreparedSpecification::prepare(&capacity_document(count, 1, count, count)).unwrap();
+        assert_eq!(prepared.output().columns().len(), count);
+        assert_eq!(prepared.sources()[0].types.len(), count);
+    }
+    for count in [63, 64] {
+        assert_eq!(
+            PreparedSpecification::prepare(&capacity_document(1, count, 1, 1))
+                .unwrap()
+                .sources()
+                .len(),
+            count
+        );
+    }
+    for (width, inputs, fields, projected, resource) in [
+        (257, 1, 1, 256, "columns"),
+        (1, 65, 1, 1, "inputs"),
+        (1, 1, 257, 1, "source_fields"),
+        (256, 1, 1, 257, "projected_columns"),
+    ] {
+        assert!(
+            matches!(PreparedSpecification::prepare(&capacity_document(width, inputs, fields, projected)),
+            Err(PrepareError::Limit(actual)) if actual == resource)
+        );
+    }
+}
+
 fn case_document(when: &str, expression: &str) -> SpecificationDocument {
     use Tree::*;
     operation_document(

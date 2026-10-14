@@ -199,3 +199,79 @@ fn charge<E>(
         })),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::convert::Infallible;
+
+    #[test]
+    fn scalar_and_predicate_text_share_the_new_ceiling_without_refunding_refusals() {
+        let limits = crate::dataset::ExecutionBudget::bounded().execution;
+        let mut budget = Budget::new(limits);
+        let limit = limits.scalar_text_bytes;
+        budget.scalar_text::<Infallible>(limit - 1).unwrap();
+        let mut local = predicate::Budget::new(predicate::Usage {
+            text_bytes: 2,
+            ..Default::default()
+        });
+        budget.predicate_operand_text(&mut local, 1).unwrap();
+        assert_eq!(budget.runtime.used().text_bytes, limit);
+        assert_eq!(
+            budget.predicate_operand_text(&mut local, 1),
+            Err(predicate::LimitError {
+                resource: predicate::Resource::TextBytes,
+                limit,
+            })
+        );
+        assert_eq!(budget.runtime.used().text_bytes, limit);
+        assert!(matches!(
+            *budget.scalar_text::<Infallible>(1).unwrap_err(),
+            ExecutionError::Limit {
+                resource: Resource::ScalarTextBytes,
+                limit: actual,
+                required: Some(required),
+            } if actual == limit && required == limit + 1
+        ));
+        assert!(matches!(
+            *budget.scalar_text::<Infallible>(usize::MAX).unwrap_err(),
+            ExecutionError::Limit {
+                resource: Resource::ScalarTextBytes,
+                required: None,
+                ..
+            }
+        ));
+        assert_eq!(budget.runtime.used().text_bytes, limit);
+    }
+
+    #[test]
+    fn retained_text_admits_equality_and_one_more_refuses_before_changing_retention() {
+        let limits = crate::dataset::ExecutionBudget::bounded().execution;
+        let limit = limits.output_text_bytes;
+        let mut budget = Budget::new(limits);
+        let prefix = Value::Str("x".repeat(limit - 1));
+        budget.value::<Infallible>(&prefix).unwrap();
+        budget.admit_output_text::<Infallible>(1).unwrap();
+        assert_eq!(budget.output_text, limit - 1);
+        budget.value::<Infallible>(&Value::Str("y".into())).unwrap();
+        for error in [
+            budget.admit_output_text::<Infallible>(1).unwrap_err(),
+            budget
+                .value::<Infallible>(&Value::Str("z".into()))
+                .unwrap_err(),
+        ] {
+            assert!(matches!(
+                *error,
+                ExecutionError::Limit {
+                    resource: Resource::OutputTextBytes,
+                    limit: actual,
+                    required: Some(required),
+                } if actual == limit && required == limit + 1
+            ));
+        }
+        assert_eq!(budget.output_text, limit);
+        assert_eq!(budget.runtime.used().text_bytes, 0);
+        budget.discard_candidate(&[prefix]);
+        assert_eq!(budget.output_text, 1);
+    }
+}

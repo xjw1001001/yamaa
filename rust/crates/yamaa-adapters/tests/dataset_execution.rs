@@ -92,6 +92,7 @@ fn combined_quotas_are_configurable_and_reset_per_attempt() {
     let secondary = vec![donor.as_slice(); 8];
     let plan = plan(schema(ColumnType::Int), 8, RowMode::Records);
     let mut budget = ExecutionBudget::default();
+    budget.max_sources = 8;
     assert!(matches!(
         execute_dataset_with_budget(&plan, &input, &secondary, budget),
         Err(TableError::ShapeLimit)
@@ -147,6 +148,26 @@ fn combined_quotas_are_configurable_and_reset_per_attempt() {
         execute_dataset_with_budget(&plan, &input, &[], budget),
         Err(TableError::InvalidTable)
     ));
+}
+
+#[test]
+fn default_input_count_admits_all_sixty_four_slots_and_refuses_the_next() {
+    let input = integers(&[&[1, 2]]);
+    let donor = integers(&[&[3]]);
+    for count in [63, 64, 65] {
+        let secondary = vec![donor.as_slice(); count - 1];
+        let plan = plan(schema(ColumnType::Int), count - 1, RowMode::Records);
+        let result =
+            execute_dataset_with_budget(&plan, &input, &secondary, ExecutionBudget::default());
+        if count <= 64 {
+            assert_eq!(
+                result.unwrap().result.unwrap().dataset.rows(),
+                &[vec![Value::Int(1)], vec![Value::Int(2)]]
+            );
+        } else {
+            assert!(matches!(result, Err(TableError::ShapeLimit)));
+        }
+    }
 }
 
 #[test]

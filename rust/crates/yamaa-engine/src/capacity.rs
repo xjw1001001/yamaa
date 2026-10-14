@@ -6,14 +6,20 @@
 /// keep their separate cumulative 1,048,576-row ceiling.
 pub const SOURCE_ROWS: usize = 524_288;
 pub const SOURCE_CELLS: usize = 2_097_152;
-pub const SOURCE_BYTES: usize = 16 * 1024 * 1024;
+pub const SOURCE_COLUMNS: usize = yamaa_core::specification::DEFAULT_COLUMN_LIMIT;
+pub const SOURCE_COUNT: usize = yamaa_core::specification::DEFAULT_INPUT_LIMIT;
+pub const SOURCE_BYTES: usize = 32 * 1024 * 1024;
+/// Parquet keeps its existing codec framing allowance independently of CSV.
+pub const PARQUET_SOURCE_BYTES: usize = 8 * 1024 * 1024;
 pub const EXECUTION_WORK: usize = 128 * 1024 * 1024;
 pub const GRAPH_OUTPUT_CELLS: usize = 2_097_152;
 pub const OUTPUT_ROWS: usize = 131_072;
 pub const OUTPUT_CELLS: usize = 1_048_576;
 pub const KEY_CELLS: usize = 524_288;
 pub const IDENTITY_CELLS: usize = 65_536;
-pub const OUTPUT_TEXT_BYTES: usize = 2 * 1024 * 1024;
+/// Cumulative operand copying/processing; separate from retained result text.
+pub const SCALAR_TEXT_BYTES: usize = 128 * 1024 * 1024;
+pub const OUTPUT_TEXT_BYTES: usize = 8 * 1024 * 1024;
 pub const IDENTITY_TEXT_BYTES: usize = 1024 * 1024;
 
 /// Report frontier policy. Encoded complete prefixes and actual

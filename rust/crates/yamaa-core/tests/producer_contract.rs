@@ -79,6 +79,28 @@ fn document(columns: &[(&str, &str, Option<&str>)], output: &[&str]) -> Specific
     .unwrap()
     .unwrap()
 }
+
+#[test]
+fn default_contract_admits_full_clinical_width_and_refuses_the_next_field() {
+    for width in [255, 256, 257] {
+        let names = (0..width)
+            .map(|i| if i == 0 { "ID".into() } else { format!("F{i}") })
+            .collect::<Vec<String>>();
+        let columns = names
+            .iter()
+            .map(|name| (name.as_str(), "str", Some("Field")))
+            .collect::<Vec<_>>();
+        let output = names.iter().map(String::as_str).collect::<Vec<_>>();
+        let result = prepare(&document(&columns, &output), Limits::default());
+        if width <= 256 {
+            let contract = result.unwrap();
+            assert_eq!(contract.fields().len(), width);
+            assert_eq!(contract.fields().last().unwrap().name, names[width - 1]);
+        } else {
+            assert_eq!(result, Err(Error::Limit("producer_declarations")));
+        }
+    }
+}
 const FIELDS: &[(&str, &str, Option<&str>)] = &[
     ("VALUE", "float", Some("Reported value")),
     ("ID", "int", Some("Identifier")),

@@ -137,7 +137,7 @@ impl Default for Limits {
     fn default() -> Self {
         Self {
             nodes: 64,
-            source_bytes: 16_777_216,
+            source_bytes: crate::capacity::SOURCE_BYTES,
             source_cells: crate::capacity::SOURCE_CELLS,
             source_storage_bytes: 67_108_864,
             decode_work_bytes: 268_435_456,
@@ -150,7 +150,7 @@ impl Default for Limits {
                 output_cells: crate::capacity::GRAPH_OUTPUT_CELLS,
                 key_cells: 1_048_576,
                 work_cells: crate::capacity::EXECUTION_WORK,
-                scalar_text_bytes: 16_777_216,
+                scalar_text_bytes: crate::capacity::SCALAR_TEXT_BYTES,
                 output_text_bytes: 16_777_216,
                 identity_cells: 1_048_576,
                 identity_text_bytes: 16_777_216,

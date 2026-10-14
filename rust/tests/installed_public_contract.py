@@ -37,6 +37,67 @@ class PublicContract(unittest.TestCase):
         self.spec.write_text(SPEC, encoding="utf-8")
         (self.root / "input.csv").write_bytes(INPUT)
 
+    def test_bounded_clinical_width_inheritance_and_text_keep_complete_held_saves(self):
+        # These authored correctness cases do not alter the timing campaign.
+        def complete(document, names, rows, *, inherited=False):
+            for artifact in ("output.csv", "parent.yaml"):
+                (self.root / artifact).unlink(missing_ok=True)
+            if inherited:
+                (self.root / "parent.yaml").write_text(document, encoding="utf-8")
+                self.spec.write_text("schema_version: '1.0'\nparents: [parent.yaml]\n", encoding="utf-8")
+            else:
+                self.spec.write_text(document, encoding="utf-8")
+            self.assertTrue(yamaa.check(self.spec).issues.is_empty())
+            result = yamaa.domain(self.spec)
+            self.assertTrue(result.issues.is_empty(), result.issues)
+            self.assertFalse((self.root / "output.csv").exists())
+            self.assertEqual(result.output.columns, names)
+            self.assertEqual(result.output.dtypes, [pl.String] * len(names))
+            self.assertEqual(result.output.rows(), rows)
+            self.assertIsNone(result.verification_log)
+            self.assertIsNone(result.warning_log)
+            expected = (",".join(names) + "\n" + "".join(",".join(row) + "\n" for row in rows)).encode()
+            for _ in range(2):
+                self.assertTrue(result.save())
+                self.assertEqual((self.root / "output.csv").read_bytes(), expected)
+                self.assertEqual(result.output.rows(), rows)
+
+        for width in (40, 150, 256):
+            names = ["ID"] + [f"F{i:03d}" for i in range(1, width)]
+            columns = "  - {name: ID, type: str, derivation: SRC.ID}\n" + "".join(
+                f"  - name: {name}\n    type: str\n    derivation:\n      case:\n"
+                f"        - {{when: \"SRC.A = 'x' AND SRC.B = '{index % 3}'\", then: {{literal: P}}}}\n"
+                "        - {when: \"SRC.A IS NULL\", then: {literal: Q}}\n"
+                "        - {otherwise: SRC.A}\n" for index, name in enumerate(names[1:], 1))
+            document = ("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n"
+                        f"columns:\n{columns}output: {{path: output.csv, columns: [{', '.join(names)}]}}\n")
+            (self.root / "input.csv").write_bytes(b"ID,A,B\nS-001,x,1\nS-002,y,2\nS-003,,3\n")
+            rows = [tuple(["S-001"] + ["P" if i % 3 == 1 else "x" for i in range(1, width)]),
+                    tuple(["S-002"] + ["y"] * (width - 1)), tuple(["S-003"] + ["Q"] * (width - 1))]
+            for inherited in (False, True):
+                with self.subTest(width=width, inherited=inherited):
+                    complete(document, names, rows, inherited=inherited)
+            with self.subTest(width=width, empty_parents=True):
+                complete(document.replace("domain: TEST", "parents: []\ndomain: TEST"), names, rows)
+
+        names = ["ID"] + [f"F{i:02d}" for i in range(1, 41)]
+        rows = [tuple([f"S{i:06d}"] + ["Y" if i % 2 else "N"] * 40) for i in range(1, 4001)]
+        (self.root / "input.csv").write_text("ID,T\n" + "".join(
+            f"S{i:06d},{('a' if i % 2 else 'b') * 40}\n" for i in range(1, 4001)), encoding="utf-8")
+        columns = "  - {name: ID, type: str, derivation: SRC.ID}\n" + "".join(
+            f"  - name: {name}\n    type: str\n    derivation:\n      case:\n"
+            f"        - {{when: \"SRC.T = '{'a' * 40}'\", then: {{literal: Y}}}}\n"
+            "        - {otherwise: {literal: N}}\n" for name in names[1:])
+        complete("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n"
+                 f"columns:\n{columns}output: {{path: output.csv, columns: [{', '.join(names)}]}}\n", names, rows)
+
+        rows = [(f"S{i:06d}", "t" * 80) for i in range(1, 30001)]
+        (self.root / "input.csv").write_text("ID,T\n" + "".join(f"{key},{value}\n" for key, value in rows), encoding="utf-8")
+        complete("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n"
+                 "columns:\n  - {name: ID, type: str, derivation: SRC.ID}\n"
+                 "  - {name: T, type: str, derivation: SRC.T}\n"
+                 "output: {path: output.csv, columns: [ID, T]}\n", ["ID", "T"], rows)
+
     def issues(self, result):
         frame = result.issues
         self.assertEqual(

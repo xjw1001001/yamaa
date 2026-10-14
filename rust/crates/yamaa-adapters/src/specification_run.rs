@@ -276,7 +276,7 @@ pub(crate) fn decode_interpreted(
     });
     let table_limits = TableLimits {
         max_rows: yamaa_engine::capacity::SOURCE_ROWS,
-        max_columns: 64,
+        max_columns: yamaa_engine::capacity::SOURCE_COLUMNS,
         max_batches: 1,
         max_cells: cells,
     };
@@ -357,8 +357,10 @@ pub(crate) fn bounded_csv_limits(
             .bytes
             .min(limits.storage_bytes)
             .min(limits.work_bytes),
-        // Charges precede each temporary field, including at most 64 headers.
-        fields: ordinary.fields.min(cells.saturating_add(64)),
+        // Charges precede each temporary field, including the admitted header.
+        fields: ordinary
+            .fields
+            .min(cells.saturating_add(yamaa_engine::capacity::SOURCE_COLUMNS)),
         records: ordinary.records.min(cells.saturating_add(1)),
     }
 }
@@ -375,7 +377,7 @@ fn decode_parquet(
     use yamaa_core::table::TableAccess;
     let table_limits = TableLimits {
         max_rows: yamaa_engine::capacity::SOURCE_ROWS,
-        max_columns: 64,
+        max_columns: yamaa_engine::capacity::SOURCE_COLUMNS,
         max_batches: 1,
         max_cells: bounded.map_or(yamaa_engine::capacity::SOURCE_CELLS, |l| {
             l.cells.min(yamaa_engine::capacity::SOURCE_CELLS)
@@ -392,7 +394,7 @@ fn decode_parquet(
         bytes,
         parquet_source::Limits {
             framing: FramingLimits {
-                source_bytes: csv_source::Limits::default().bytes,
+                source_bytes: yamaa_engine::capacity::PARQUET_SOURCE_BYTES,
                 metadata_bytes: 2 * 1024 * 1024,
                 metadata_nodes: 65_536,
                 header_bytes: 65_536,
@@ -459,4 +461,50 @@ fn decode_parquet(
         .collect::<Result<Vec<_>, _>>()?;
     ArrowTable::try_new(table.schema().clone(), batches, table_limits)
         .map_err(|error| Error::Source(TextTableError::Table(error)))
+}
+
+#[cfg(test)]
+mod capacity_tests {
+    use super::*;
+
+    #[test]
+    fn complete_wide_header_is_reserved_separately_from_data_cells() {
+        use yamaa_engine::producer_build::DecodeLimits;
+        let width = yamaa_engine::capacity::SOURCE_COLUMNS;
+        let names = (0..width).map(|i| format!("F{i}")).collect::<Vec<_>>();
+        let header = format!("{}\n", names.join(","));
+        let row = format!("{}\n", vec!["x"; width].join(","));
+        let limits = bounded_csv_limits(DecodeLimits {
+            cells: width,
+            storage_bytes: 4096,
+            work_bytes: 4096,
+        });
+        assert!(csv_source::parse(header.as_bytes(), limits)
+            .unwrap()
+            .records
+            .is_empty());
+        let complete = format!("{header}{row}");
+        let parsed = csv_source::parse(complete.as_bytes(), limits).unwrap();
+        assert_eq!(parsed.names, names);
+        assert_eq!(parsed.records.len(), 1);
+        assert_eq!(parsed.records[0], vec![Some("x".into()); width]);
+        let refused = format!("{complete}{row}");
+        assert!(matches!(
+            csv_source::parse(refused.as_bytes(), limits),
+            Err(csv_source::Error::Limit { resource: "fields", limit }) if limit == 2 * width
+        ));
+        // Codec reservation remains independently authoritative even for headers.
+        let narrow_bytes = bounded_csv_limits(DecodeLimits {
+            cells: width,
+            storage_bytes: header.len() - 1,
+            work_bytes: 4096,
+        });
+        assert!(matches!(
+            csv_source::parse(header.as_bytes(), narrow_bytes),
+            Err(csv_source::Error::Limit {
+                resource: "bytes",
+                ..
+            })
+        ));
+    }
 }

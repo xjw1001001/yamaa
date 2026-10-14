@@ -204,10 +204,10 @@ fn shape_and_schema_policy_are_enforced() {
     let schema = Arc::new(Schema::new(vec![Field::new("I", DataType::Int64, false)]));
     let batch = RecordBatch::try_new(schema, vec![Arc::new(Int64Array::from(vec![1]))]).unwrap();
     assert_eq!(table_snapshot(&stream(&batch)), Err(E::InvalidTable));
-    let fields = (0..65)
+    let fields = (0..257)
         .map(|i| Field::new(format!("C{i}"), DataType::Int64, true))
         .collect::<Vec<_>>();
-    let arrays = (0..65)
+    let arrays = (0..257)
         .map(|_| Arc::new(Int64Array::from(Vec::<i64>::new())) as arrow_array::ArrayRef)
         .collect();
     let batch = RecordBatch::try_new(Arc::new(Schema::new(fields)), arrays).unwrap();

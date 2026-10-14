@@ -233,4 +233,69 @@ run_contract <- function() {
   invisible(NULL)
 }
 run_contract()
+
+run_bounded_capacity_contract <- function() {
+  root <- tempfile("yamaa-capacity-contract-"); dir.create(root)
+  on.exit(unlink(root, recursive = TRUE))
+  path <- function(name) file.path(root, name)
+  write <- function(name, text) writeBin(charToRaw(text), path(name))
+  complete <- function(document, names, rows, inherited = FALSE) {
+    unlink(path(c("output.csv", "parent.yaml")))
+    if (inherited) {
+      write("parent.yaml", document)
+      write("spec.yaml", "schema_version: '1.0'\nparents: [parent.yaml]\n")
+    } else write("spec.yaml", document)
+    stopifnot(nrow(yamaa_check(path("spec.yaml"))$issues) == 0L)
+    result <- yamaa_domain(path("spec.yaml"))
+    stopifnot(nrow(result$issues) == 0L, !file.exists(path("output.csv")),
+      identical(names(result$output), names),
+      all(vapply(result$output, is.character, logical(1))),
+      nrow(result$output) == length(rows),
+      is.null(result$verification_log), is.null(result$warning_log))
+    for (index in seq_along(names)) stopifnot(identical(result$output[[index]],
+      vapply(rows, function(row) row[[index]], character(1))))
+    expected <- charToRaw(paste0(paste(names, collapse = ","), "\n",
+      paste0(vapply(rows, paste, character(1), collapse = ","), "\n", collapse = "")))
+    held <- result$output
+    for (attempt in 1:2) stopifnot(isTRUE(result$save()),
+      identical(readBin(path("output.csv"), "raw", n = file.info(path("output.csv"))$size), expected),
+      identical(result$output, held))
+  }
+  # Independently authored regression geometry, outside the timing cases.
+  for (width in c(40L, 150L, 256L)) {
+    names <- c("ID", sprintf("F%03d", seq_len(width - 1L)))
+    columns <- paste0("  - {name: ID, type: str, derivation: SRC.ID}\n",
+      paste0(vapply(seq_len(width - 1L), function(index) paste0(
+        "  - name: ", names[[index + 1L]], "\n    type: str\n    derivation:\n      case:\n",
+        "        - {when: \"SRC.A = 'x' AND SRC.B = '", index %% 3L, "'\", then: {literal: P}}\n",
+        "        - {when: \"SRC.A IS NULL\", then: {literal: Q}}\n",
+        "        - {otherwise: SRC.A}\n"), character(1)), collapse = ""))
+    document <- paste0("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n",
+      "columns:\n", columns, "output: {path: output.csv, columns: [", paste(names, collapse = ", "), "]}\n")
+    write("input.csv", "ID,A,B\nS-001,x,1\nS-002,y,2\nS-003,,3\n")
+    rows <- list(c("S-001", ifelse(seq_len(width - 1L) %% 3L == 1L, "P", "x")),
+      c("S-002", rep("y", width - 1L)), c("S-003", rep("Q", width - 1L)))
+    complete(document, names, rows)
+    complete(document, names, rows, inherited = TRUE)
+    complete(sub("domain: TEST", "parents: []\ndomain: TEST", document, fixed = TRUE), names, rows)
+  }
+  names <- c("ID", sprintf("F%02d", 1:40))
+  rows <- lapply(1:4000, function(index) c(sprintf("S%06d", index), rep(if (index %% 2L) "Y" else "N", 40)))
+  write("input.csv", paste0("ID,T\n", paste0(vapply(1:4000, function(index)
+    paste0(sprintf("S%06d", index), ",", strrep(if (index %% 2L) "a" else "b", 40), "\n"), character(1)), collapse = "")))
+  columns <- paste0("  - {name: ID, type: str, derivation: SRC.ID}\n",
+    paste0(vapply(names[-1L], function(name) paste0(
+      "  - name: ", name, "\n    type: str\n    derivation:\n      case:\n",
+      "        - {when: \"SRC.T = '", strrep("a", 40), "'\", then: {literal: Y}}\n",
+      "        - {otherwise: {literal: N}}\n"), character(1)), collapse = ""))
+  complete(paste0("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n",
+    "columns:\n", columns, "output: {path: output.csv, columns: [", paste(names, collapse = ", "), "]}\n"), names, rows)
+  rows <- lapply(1:30000, function(index) c(sprintf("S%06d", index), strrep("t", 80)))
+  write("input.csv", paste0("ID,T\n", paste0(vapply(rows, paste, character(1), collapse = ","), "\n", collapse = "")))
+  complete(paste0("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n",
+    "columns:\n  - {name: ID, type: str, derivation: SRC.ID}\n",
+    "  - {name: T, type: str, derivation: SRC.T}\n",
+    "output: {path: output.csv, columns: [ID, T]}\n"), c("ID", "T"), rows)
+}
+run_bounded_capacity_contract()
 cat("public signatures, argument errors, owned results and logs, exact values, interrupts and reentrancy passed\n")

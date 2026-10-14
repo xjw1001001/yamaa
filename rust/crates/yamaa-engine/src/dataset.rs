@@ -155,10 +155,10 @@ impl ExecutionBudget {
     /// Existing capacity policy for callers that do not select a larger budget.
     pub const fn bounded() -> Self {
         Self {
-            max_sources: 8,
+            max_sources: crate::capacity::SOURCE_COUNT,
             max_ipc_bytes: 8 * 1024 * 1024,
             max_decoded_cells: crate::capacity::SOURCE_CELLS,
-            max_columns: 64,
+            max_columns: crate::capacity::SOURCE_COLUMNS,
             max_batches: 256,
             max_output_bytes: 8 * 1024 * 1024,
             batch_rows: None,
@@ -168,7 +168,7 @@ impl ExecutionBudget {
                 output_cells: crate::capacity::OUTPUT_CELLS,
                 key_cells: crate::capacity::KEY_CELLS,
                 work_cells: crate::capacity::EXECUTION_WORK,
-                scalar_text_bytes: 16 * 1024 * 1024,
+                scalar_text_bytes: crate::capacity::SCALAR_TEXT_BYTES,
                 output_text_bytes: crate::capacity::OUTPUT_TEXT_BYTES,
                 identity_cells: crate::capacity::IDENTITY_CELLS,
                 identity_text_bytes: crate::capacity::IDENTITY_TEXT_BYTES,

@@ -111,6 +111,41 @@ fn policy_limits_do_not_publish_partial_rows() {
     }
 }
 
+#[test]
+fn complete_default_byte_prefixes_and_unread_syntax_remain_authoritative() {
+    let limits = Limits::default();
+    for length in [limits.bytes - 1, limits.bytes, limits.bytes + 1] {
+        let mut input = b"U\n".to_vec();
+        input.resize(length - 1, b'a');
+        input.push(b'\n');
+        let result = parse(&input, limits);
+        if length <= limits.bytes {
+            let parsed = result.unwrap();
+            assert_eq!(parsed.names, ["U"]);
+            assert_eq!(parsed.records.len(), 1);
+            assert_eq!(parsed.records[0][0].as_ref().unwrap().len(), length - 3);
+        } else {
+            assert_eq!(
+                result,
+                Err(Error::Limit {
+                    resource: "bytes",
+                    limit: limits.bytes
+                })
+            );
+        }
+    }
+    // Raising byte allowance must not turn later unread cells into ignored data.
+    let input = b"ID,UNREAD\n01,valid\n02,\"unterminated";
+    assert!(matches!(
+        parse(input, limits),
+        Err(Error::Profile {
+            cause: ProfileCause::QuoteUnterminated,
+            record: 3,
+            ..
+        })
+    ));
+}
+
 fn cause(condition: &str) -> ProfileCause {
     match condition {
         "invalid_text" => ProfileCause::InvalidText,

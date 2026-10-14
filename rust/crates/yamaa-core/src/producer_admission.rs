@@ -58,7 +58,7 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Self {
-            candidates: 16,
+            candidates: crate::specification::DEFAULT_INPUT_LIMIT,
             document_nodes: 200_000,
             text_bytes: 1_048_576,
             contract: Default::default(),

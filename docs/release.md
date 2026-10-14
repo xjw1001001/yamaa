@@ -111,7 +111,7 @@ implementation owners are not reopened; the following owners renew final evidenc
 | B14 - content identity | Policy resolved by the lockfile exception above; build evidence belongs to B13. |
 | B15 - independent audit | Audit implemented; passing post-removal combined-main verdict and original-input offline replay: #2145. |
 | B16 - lifecycle/removal | Installed controls retained; final ownership/interruptions/reentrancy/repeated use/Save: #2145; removal reconciliation: #2147. |
-| B17 - performance/capacity | Harness merged; bounded default policy selected below from [#2142](https://github.com/elong0527/yamaa/issues/2142) installed evidence. Native renewal, [#2141](https://github.com/elong0527/yamaa/issues/2141) replay and [#2144](https://github.com/elong0527/yamaa/issues/2144) complete campaign remain separate gates. |
+| B17 - performance/capacity | Harness merged; the bounded candidate profile below addresses [#2142](https://github.com/elong0527/yamaa/issues/2142) installed width/text refusals. New-source correctness and full native qualification precede adoption; [#2141](https://github.com/elong0527/yamaa/issues/2141) replay and [#2144](https://github.com/elong0527/yamaa/issues/2144) complete campaign remain separate gates. |
 | B18 - numeric budgets | Item 10 remains unrecorded: [#2143](https://github.com/elong0527/yamaa/issues/2143) independent auditor and #2144 observations/budgets. |
 | B19 - transition/rollback | Concrete plan and earlier rollback receipts exist; item 11, final re-admission and artifact handoff: #2147. |
 
@@ -135,22 +135,23 @@ thresholds merely to make results pass.
 ### Bounded runtime capacity
 
 Under the delegated [#1973](https://github.com/elong0527/yamaa/issues/1973)
-authority, [#2142](https://github.com/elong0527/yamaa/issues/2142) selects the
-existing default ceilings for the nine authored dimension variants at
-1k/10k/100k driving rows. No ceiling or language rule is changed. This selection
-is supported by complete installed correctness and actual report admission
-measurements, rather than the earlier probe labels or a process-memory estimate.
-Wider domains, different multiplicities/depths and the trusted Rust longitudinal
-profile keep their own explicit admission outcomes; this decision does not
-promise every combination of maximum dimensions.
+authority, [#2142](https://github.com/elong0527/yamaa/issues/2142) proposes the
+bounded default profile below. Original-source correctness covers the nine
+authored dimension variants at 1k/10k/100k driving rows and separately reproduces
+width, inherited-validation and text refusals. Adoption remains pending actual
+installed correctness at the changed source and full native qualification.
+These caller-selected resource limits are not language rules. Different
+multiplicities/depths and the trusted Rust longitudinal profile keep explicit
+admission outcomes; maximum dimensions cannot be freely combined.
 
-| Admission scope | Ceiling and units | Enforcement |
+| Admission scope | Candidate ceiling and units | Enforcement |
 | --- | --- | --- |
-| Ordinary source | 524,288 combined rows; 2,097,152 cells; 16 MiB captured bytes. Each CSV admits 8 MiB, 1,048,576 fields/records including the header, and 64 physical columns. | CSV scanning bounds temporary fields/records; decoded shape admission precedes Arrow construction, and combined source admission precedes execution cell reads. |
-| Copied IPC sources | Eight sources; 8 MiB cumulative encoded bytes and a separate 8 MiB decoded logical-string counter; 256 batches and 64 columns, with the ordinary source row/cell ceilings. | All source framing, schemas and cumulative shapes are admitted before any Arrow decoder; checked text admission precedes owned payloads. |
+| Compilation and validation | 256 declared/projected/source fields, 64 inputs; 64 Mi cumulative validation-work units. Keys and operands of one `first_available` remain separately bounded at 64. | Compiler, typing, producer contracts and physical decoders share the width policy. Validation still shares work across defaults, documents and normalization selection; document nodes/text/depth, diagnostics and regex limits remain finite and unchanged. |
+| Ordinary source | 524,288 combined rows; 2,097,152 decoded cells; 32 MiB captured bytes. Each CSV admits 16 MiB, 2,097,408 scanned fields and 1,048,576 records including the header. Ordinary/typed physical tables admit 256 columns; Parquet retains its separate 8 MiB encoded framing allowance. | CSV scanning bounds temporary fields/records, including unread data. The header reserve is 256 fields; decoded shape admission precedes Arrow construction, and combined source admission precedes execution cell reads. Declared sources retain complete validation and cumulative charges. |
+| Copied IPC sources | 64 sources; 8 MiB cumulative encoded bytes and a separate 8 MiB decoded logical-string counter; 256 batches and 256 columns, with the ordinary source row/cell ceilings. | All source framing, schemas and cumulative shapes are admitted before any Arrow decoder; checked text admission precedes owned payloads. |
 | Arrow C sources | The same row/cell/column policy; 256 cumulative batches; separate 16 MiB input-buffer and logical-string counters; 64 KiB schema metadata. | One owner counts all sources and empty batches. A refused new stream releases its ownership without invalidating earlier accepted tables. |
-| Ordinary execution | 128 Mi logical WorkCells; 131,072 output rows; 1,048,576 output cells; 524,288 key cells; 16 MiB scalar text; 2 MiB output text; 65,536 retained identity cells / 1 MiB identity text. | Checked arithmetic precedes bounded materialization and identity copies. Logical work units are not elapsed CPU time. |
-| Graph capture and execution | 64 nodes; 16 MiB captured bytes and encoded artifacts; 2,097,152 decoded/owned output cells; 1,048,576 source/output rows, key cells and retained identity cells; 16 MiB scalar/output/identity text; shared actual 128 Mi WorkCells; 64 MiB codec-storage, 256 Mi decode-work and 64 Mi routing reservations. | Source-row shares weight declared input slots; output-cell shares weight owned columns. Other row/key/text/identity shares remain conservative per node. Aliases consume read/cell/work admission while borrowing retained artifact bytes. CSV codec-storage reservations cap encoded input; field/record/shape policies separately bound temporary ownership. |
+| Ordinary execution | 128 Mi logical WorkCells; 131,072 output rows; 1,048,576 output cells; 524,288 key cells; 128 MiB cumulative scalar text; 8 MiB retained output text; 65,536 retained identity cells / 1 MiB identity text. | Checked arithmetic precedes bounded materialization and identity copies. Scalar text charges repeated operand copying/processing; output text charges retained UTF-8 values. Logical work units are not elapsed CPU time. |
+| Graph capture and execution | 64 nodes; 32 MiB captured bytes; 16 MiB encoded artifacts; 2,097,152 decoded/owned output cells; 1,048,576 source/output rows, key cells and retained identity cells; 128 MiB scalar text; 16 MiB output/identity text; shared actual 128 Mi WorkCells; 64 MiB codec-storage, 256 Mi decode-work and 64 Mi routing reservations. | Source-row shares weight declared input slots; output-cell shares weight owned columns. Other row/key/text/identity shares remain conservative per node. Aliases consume read/cell/work admission while borrowing retained artifact bytes. CSV codec-storage reservations cap encoded input; field/record/shape policies separately bound temporary ownership. |
 | Reports | 160 MiB compact encoded bytes; retained charge min(6 × requested encoded allowance, 768 MiB); 4,194,304 cells; 512 Mi logical report work. | Native node reports pool actual lengths/charges. Aggregate formatting, typed copying and each Save have separate owners. Row buffers charge 3 × requested capacity before reserve; text/entry charges precede copies. |
 | Typed public copies | 8 MiB final IPC, with the report counters above; each of three passes charges 64 bytes per visited cell, 2,048 per column and 4 per UTF-8 payload byte. | A failed copy exposes no output or Save capability and retains the accepted native graph and original refusal. |
 | Host evidence and publication | Host metadata: 65,536 identity bytes, 16 MiB replies, 65,536 records, 64 MiB source evidence, 1,024 functions and 2,049 version findings. Observer: 64 nodes, 1 MiB identity text, 1,024 stage records and 16 Saves. Publication: 64 nodes, 1 MiB paths, 16 MiB artifact bytes and 64 Mi logical work. | Borrowed evidence, the complete target set and every possible publication-report prefix are admitted before owned copies or the first publisher. Failures preserve original errors, actual entry order and prior writes; held Saves only republish retained bytes. |
@@ -164,6 +165,61 @@ These finite counters bound the admitted operation. Allocator overhead, already
 allocated foreign buffers, host representations and collector transport are
 separate quantities. In particular, separate owner charges must not be summed
 as a whole-Build storage allowance or equated with RSS.
+
+The width choice covers the reported clinical 70–150-variable scope with bounded
+headroom. Four times the former field width and input count remains coupled to
+unchanged total source/output cells, rows and execution work. Sixty-four Mi
+validation-work units permits additional finite parent/child/default-selection
+passes over wider documents; it changes no document arena, diagnostic, text,
+depth or regex allowance. Installed inherited controls must demonstrate the
+40-column regression and the intended wider cases before this candidate is
+adopted. Neither 4,096 fields nor an unbounded validation traversal is selected.
+
+On original source `1ac79ba5`, both installed hosts ran 67 additional independently
+authored controls: 23 complete successes and 44 preserved refusals on each host.
+The controls cover compiler/projection/input counts, typed and unread physical
+widths, producer contracts, standalone/empty-parent/inherited case columns,
+CSV bytes and fields, cumulative captured bytes/rows/cells, retained result text
+and repeated predicate text. Successful controls compare every typed cell and
+all root/producer CSV bytes from two held Saves; refused controls expose no
+output, publish nothing, and retain the original errors through failed Saves.
+These are correctness controls outside the unchanged 27 timing cases.
+
+The 40-flag, 4,000-row control produces only 188,000 retained UTF-8 bytes. Each
+non-key case evaluates a 40-byte source through distinct-value collection,
+owns the 40-byte predicate operand, owns its 40-byte literal and selects a
+one-byte result: 121 cumulative scalar-text bytes per result, plus seven key
+bytes per row. The complete operation needs 19,388,000 scalar-text bytes, while
+the original 16 MiB counter refuses at a required 16,777,223 bytes. These charges
+bound repeated copying/processing, not retained result size or report copies.
+The 128 MiB candidate permits this one-comparison, 40-byte-operand geometry even
+when constrained by the 1,048,576 output-cell allowance. Longer operands, repeated
+branches and nested expressions consume the same finite counter and may refuse.
+Reports and each public typed copy retain their own checked counters.
+
+The 8 MiB retained-text candidate admits the reported 30k-row, 80-byte result
+shape beyond the former 2 MiB refusal. The final 8 MiB IPC ceiling still includes
+framing, offsets, schema and payload, so 8 MiB retained text does not promise an
+8 MiB export. The 16 MiB per-CSV and 32 MiB cumulative capture allowances support
+the isolated 9 MiB unread file and three approximately 5.9 MiB files while still
+validating their entire physical content. Decoded rows/cells, codec reservations,
+source counts and schemas can independently refuse a byte-admitted input.
+
+For example, 150 physical columns leave at most 13,981 combined source rows
+under the unchanged cell allowance; 150 output columns leave at most 6,990
+output rows. At 256 columns those bounds are 8,192 source and 4,096 output rows.
+Short-text 100k-row inputs remain possible at the authored narrow widths, while
+256 columns by 100k rows exceeds both cell policies. Sixty-four inputs means
+sixty-four individually declared sources sharing the captured-byte, decoded-cell,
+row and work allowances, not sixty-four maximum-sized files. All supported
+examples remain subject to their other independent ceilings and full validation.
+
+The fixed ODM interpretation keeps its existing eleven canonical output fields
+and distinct codec/metadata policies. CSV scanning still admits its complete
+physical fields and bytes before canonical projection, but the decoded-cell
+counter measures the canonical table, not every vendor-only field. The ordinary
+256-column examples above do not describe that interpretation. Its native source
+contracts remain owned by [#2145](https://github.com/elong0527/yamaa/issues/2145).
 
 Both installed frontiers used exact source
 [`1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0`](https://github.com/elong0527/yamaa/commit/1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0):
@@ -191,7 +247,8 @@ paths and suffixes, without executing a candidate again. It does not bound
 arbitrary path metadata. Complete report and prefix observations replace the
 exploratory metadata reserve as evidence.
 The observed charge, cell and work maxima stay below their distinct ceilings;
-no limit was raised to obtain these passes. Whole-child Linux `wait4` peak RSS
+the original 27-case passes used unchanged limits. They do not validate the
+candidate width/text increases above. Whole-child Linux `wait4` peak RSS
 was 1,406,869,504 bytes for Python and 1,644,023,808 bytes for R, including worker
 collector transport. These observations deliberately establish no RSS budget.
 

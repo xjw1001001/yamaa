@@ -17,8 +17,8 @@ pub struct Limits {
 impl Default for Limits {
     fn default() -> Self {
         Self {
-            declarations: 64,
-            fields: 64,
+            declarations: crate::specification::DEFAULT_COLUMN_LIMIT,
+            fields: crate::specification::DEFAULT_COLUMN_LIMIT,
             text_bytes: 262_144,
         }
     }

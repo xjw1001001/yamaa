@@ -67,7 +67,11 @@ impl Default for ValidationLimits {
     /// Cap recursive alias/type traversal even when the decoded value itself is shallow.
     fn default() -> Self {
         Self {
-            work: 4_194_304,
+            // A finite request scope shared by defaults, parent/child validation
+            // and normalization selection. Width grows fourfold; repeated
+            // inherited selection needs additional work without relaxing arena,
+            // diagnostic, text, depth or regex admission.
+            work: 64 * 1024 * 1024,
             diagnostics: 65_536,
             diagnostic_text_bytes: 8_388_608,
             depth: 128,
@@ -1002,5 +1006,28 @@ impl SchemaStructure {
             }
         }
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod capacity_tests {
+    use super::*;
+
+    #[test]
+    fn cumulative_default_work_accepts_equality_and_never_refunds_a_refusal() {
+        let limits = ValidationLimits::default();
+        let limit = limits.work;
+        let mut budget = ValidationBudget::new(limits);
+        budget.work(limit - 1).unwrap();
+        assert_eq!(budget.work_used(), limit - 1);
+        budget.work(1).unwrap();
+        for amount in [1, usize::MAX] {
+            assert_eq!(
+                budget.work(amount),
+                Err(ValidationError::Constraint(ConstraintError::Work { limit }))
+            );
+            assert_eq!(budget.work_used(), limit);
+        }
+        assert_eq!(budget.diagnostics_used(), 0);
     }
 }

@@ -117,6 +117,12 @@ pub enum PrepareError {
     OutputSchema(crate::table::SchemaError),
     Internal,
 }
+/// Shared bounded-profile width for compiler, source and producer schemas.
+/// This is an application policy; aggregate byte/cell ceilings still apply.
+pub const DEFAULT_COLUMN_LIMIT: usize = 256;
+/// Declared input and supplied producer metadata slots, independently of cells.
+pub const DEFAULT_INPUT_LIMIT: usize = 64;
+
 /// Trusted compiler policy, not language limits. Aggregate admission precedes
 /// owned names, findings, compiled expressions and reference catalog construction.
 #[derive(Clone, Copy, Debug)]
@@ -133,11 +139,11 @@ pub struct CompilationLimits {
 impl Default for CompilationLimits {
     fn default() -> Self {
         Self {
-            columns: 64,
+            columns: DEFAULT_COLUMN_LIMIT,
             keys: 64,
-            inputs: 16,
-            projected_columns: 64,
-            source_fields: 64,
+            inputs: DEFAULT_INPUT_LIMIT,
+            projected_columns: DEFAULT_COLUMN_LIMIT,
+            source_fields: DEFAULT_COLUMN_LIMIT,
             model_text_bytes: 262_144,
             numeric_bytes: 65_536,
             source_operands: 64,

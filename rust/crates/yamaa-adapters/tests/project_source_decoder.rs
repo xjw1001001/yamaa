@@ -23,6 +23,45 @@ use yamaa_engine::{
 struct Payload(Rc<()>);
 
 #[test]
+fn ordinary_and_typed_physical_widths_share_the_compiler_boundary() {
+    for width in [255, 256, 257] {
+        let names = (0..width).map(|i| format!("F{i}")).collect::<Vec<_>>();
+        let content = format!("{}\n{}\n", names.join(","), vec!["x"; width].join(","));
+        for typed in [false, true] {
+            let source = SourceDeclaration {
+                name: "SRC".into(),
+                path: "input.csv".into(),
+                types: if typed {
+                    names
+                        .iter()
+                        .map(|name| (name.clone(), ColumnType::Str))
+                        .collect()
+                } else {
+                    vec![]
+                },
+                profile: SourceProfile::Csv,
+                empty_string_present: false,
+                ordinal: None,
+            };
+            let result = Decoder::<Payload>::default().decode(&source, content.as_bytes());
+            if width <= 256 {
+                let table = result.unwrap();
+                assert_eq!(table.schema().columns().len(), width);
+                assert_eq!(table.row_count(), 1);
+                for column in 0..width {
+                    assert_eq!(table.cell(0, column).unwrap(), ValueRef::Str("x"));
+                }
+            } else {
+                assert!(
+                    result.is_err(),
+                    "next physical field must refuse, typed={typed}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn bounded_producer_csv_admits_original_header_before_typing_and_owns_portable_mismatch() {
     use yamaa_engine::producer_build::{DecodeError, DecodeLimits, DecodePort};
     let document = yamaa_adapters::shipped_schema::capture().unwrap().prepare_standalone(
@@ -122,7 +161,7 @@ fn bounded_producer_csv_admits_original_header_before_typing_and_owns_portable_m
             Err(DecodeError::Codec(_))
         ));
     }
-    let header = (0..65)
+    let header = (0..257)
         .map(|i| format!("F{i}"))
         .collect::<Vec<_>>()
         .join(",")
