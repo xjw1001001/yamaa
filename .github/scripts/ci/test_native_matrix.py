@@ -118,7 +118,7 @@ class NativeCoverage(unittest.TestCase):
             "cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}", workflow
         )
         for command in (
-            "cargo test --locked -p yamaa-engine --features test-support",
+            "python ../.github/scripts/commands/rust_tests.py",
             "cargo test --locked -p yamaa-adapters --features arrow-c-data --test c_data_table",
         ):
             self.assertIn(command, workflow)
