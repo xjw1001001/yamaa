@@ -1,0 +1,61 @@
+name: Retained original native snapshot proof
+
+on:
+  push:
+    branches: [proof/cleanup-retained-native-38497098490]
+
+permissions:
+  contents: read
+  actions: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.14'
+      - name: Retrieve the exact original artifact and source
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir "${RUNNER_TEMP}/retained-native-proof"
+          gh api repos/elong0527/yamaa/actions/artifacts/11866226197/zip > "${RUNNER_TEMP}/retained-native-proof/original.zip"
+          gh api repos/elong0527/yamaa/actions/artifacts/11866226197 \
+            --jq '{id, name, size_in_bytes, expired, created_at, expires_at, workflow_run}' \
+            > "${RUNNER_TEMP}/retained-native-proof/artifact-identity.json"
+          python .github/scripts/proof/replay_native_snapshot.py extract "${RUNNER_TEMP}/retained-native-proof"
+          mkdir "${RUNNER_TEMP}/retained-native-proof/original-source"
+          git archive 89b1fa90b0edfa03bc367f73426b630b36b20e85 | tar -x -C "${RUNNER_TEMP}/retained-native-proof/original-source"
+      - name: Install the original locked independent readers
+        run: |
+          python -m pip install uv==0.11.6
+          uv export --project "${RUNNER_TEMP}/retained-native-proof/original-source/python" \
+            --locked --no-dev --no-emit-project --no-hashes \
+            --output-file "${RUNNER_TEMP}/retained-native-proof/audit-requirements.txt"
+          python -m pip install --no-deps -r "${RUNNER_TEMP}/retained-native-proof/audit-requirements.txt"
+      - name: Replay original and current readers offline without changing the verdict
+        run: |
+          sudo unshare --net -- "$(command -v python)" .github/scripts/proof/replay_native_snapshot.py \
+            replay "${RUNNER_TEMP}/retained-native-proof"
+      - name: Retain original identities and both replay results
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: retained-native-38497098490-proof
+          path: |
+            ${{ runner.temp }}/retained-native-proof/artifact-identity.json
+            ${{ runner.temp }}/retained-native-proof/original-identity.json
+            ${{ runner.temp }}/retained-native-proof/replay-comparison.json
+            ${{ runner.temp }}/retained-native-proof/*-replay.log
+            ${{ runner.temp }}/retained-native-proof/*-replay/qualification.*
+          if-no-files-found: error
