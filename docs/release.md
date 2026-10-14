@@ -18,7 +18,8 @@ pending there until all evidence gates pass.
 | --- | --- |
 | Implemented and merged | Shared language execution; Python/R domain/check/define; runner conversion; legacy evaluator/API/probe and R/cdiscbuilder removal; coordinated Python/R/Cargo 0.4.0 source versions. The performance harness is merged through PR #2137; subsequent native dependency/guard, portable-math control and performance admission repairs are merged through PRs #2164-#2168. |
 | Qualified at earlier revisions | Retained public-conformance ratchet: run 38416920074, attempt 1, source `2ba10418607933f92597f7c00ac363a3113a49db`; earlier rollback rehearsals below. Their results do not qualify current main or its 0.4.0 composition. |
-| Pending evidence/decisions | Final combined-main installed/numerical audit, adopted capacity bounds, complete performance campaign and item-10 budgets, item-11 transition acceptance and exact artifact handoff. |
+| Capacity policy | The bounded default policy below is selected from actual installed Python/R frontier evidence; exact-head native renewal and final combined-main qualification remain separate gates. |
+| Pending evidence/decisions | Final combined-main installed/numerical audit, complete performance campaign and item-10 budgets, item-11 transition acceptance and exact artifact handoff. |
 | Published | [Python source release 0.3.0](https://github.com/elong0527/yamaa/releases/tag/yamaa-py-0.3.0), source `845a91ff`, published 2026-10-11, with no package assets. No shared 0.4.0 release is listed. Prior source-built Python rollback packages and the pre-cutover R 0.3.0 candidate remain unpublished drafts. |
 
 PR [#2165](https://github.com/elong0527/yamaa/pull/2165) merged without a passing
@@ -110,7 +111,7 @@ implementation owners are not reopened; the following owners renew final evidenc
 | B14 - content identity | Policy resolved by the lockfile exception above; build evidence belongs to B13. |
 | B15 - independent audit | Audit implemented; passing post-removal combined-main verdict and original-input offline replay: #2145. |
 | B16 - lifecycle/removal | Installed controls retained; final ownership/interruptions/reentrancy/repeated use/Save: #2145; removal reconciliation: #2147. |
-| B17 - performance/capacity | Harness merged, complete acceptance pending: [#2141](https://github.com/elong0527/yamaa/issues/2141) replay, [#2142](https://github.com/elong0527/yamaa/issues/2142) adopted bounds, [#2144](https://github.com/elong0527/yamaa/issues/2144) collection. |
+| B17 - performance/capacity | Harness merged; bounded default policy selected below from [#2142](https://github.com/elong0527/yamaa/issues/2142) installed evidence. Native renewal, [#2141](https://github.com/elong0527/yamaa/issues/2141) replay and [#2144](https://github.com/elong0527/yamaa/issues/2144) complete campaign remain separate gates. |
 | B18 - numeric budgets | Item 10 remains unrecorded: [#2143](https://github.com/elong0527/yamaa/issues/2143) independent auditor and #2144 observations/budgets. |
 | B19 - transition/rollback | Concrete plan and earlier rollback receipts exist; item 11, final re-admission and artifact handoff: #2147. |
 
@@ -127,12 +128,91 @@ Performance acceptance is 27 cases (nine dimension variants at 1k/10k/100k) on
 all 21 tuples: 567 combinations, ten cold and thirty warm samples after three
 retained warmups. Use independent typed/output truth, raw clocks/RSS/phases/callbacks,
 both Saves and the prior Python 0.3.0 baseline on the same machine without
-concurrent compilation. Capacity constants remain unapproved. Logical rows/cells/work, captured bytes,
-graph ownership, encoded reports and publication prefixes have separate bounded
-scopes. Retained admission counters are per owner and do not cap whole-process
-RSS. Refusals and
+concurrent compilation. Capacity follows the decision below. Refusals and
 unavailable/incomparable metrics require explicit dispositions; do not choose
 thresholds merely to make results pass.
+
+### Bounded runtime capacity
+
+Under the delegated [#1973](https://github.com/elong0527/yamaa/issues/1973)
+authority, [#2142](https://github.com/elong0527/yamaa/issues/2142) selects the
+existing default ceilings for the nine authored dimension variants at
+1k/10k/100k driving rows. No ceiling or language rule is changed. This selection
+is supported by complete installed correctness and actual report admission
+measurements, rather than the earlier probe labels or a process-memory estimate.
+Wider domains, different multiplicities/depths and the trusted Rust longitudinal
+profile keep their own explicit admission outcomes; this decision does not
+promise every combination of maximum dimensions.
+
+| Admission scope | Ceiling and units | Enforcement |
+| --- | --- | --- |
+| Ordinary source | 524,288 combined rows; 2,097,152 cells; 16 MiB captured bytes. Each CSV admits 8 MiB, 1,048,576 fields/records including the header, and 64 physical columns. | CSV scanning bounds temporary fields/records; decoded shape admission precedes Arrow construction, and combined source admission precedes execution cell reads. |
+| Copied IPC sources | Eight sources; 8 MiB cumulative encoded bytes and a separate 8 MiB decoded logical-string counter; 256 batches and 64 columns, with the ordinary source row/cell ceilings. | All source framing, schemas and cumulative shapes are admitted before any Arrow decoder; checked text admission precedes owned payloads. |
+| Arrow C sources | The same row/cell/column policy; 256 cumulative batches; separate 16 MiB input-buffer and logical-string counters; 64 KiB schema metadata. | One owner counts all sources and empty batches. A refused new stream releases its ownership without invalidating earlier accepted tables. |
+| Ordinary execution | 128 Mi logical WorkCells; 131,072 output rows; 1,048,576 output cells; 524,288 key cells; 16 MiB scalar text; 2 MiB output text; 65,536 retained identity cells / 1 MiB identity text. | Checked arithmetic precedes bounded materialization and identity copies. Logical work units are not elapsed CPU time. |
+| Graph capture and execution | 64 nodes; 16 MiB captured bytes and encoded artifacts; 2,097,152 decoded/owned output cells; 1,048,576 source/output rows, key cells and retained identity cells; 16 MiB scalar/output/identity text; shared actual 128 Mi WorkCells; 64 MiB codec-storage, 256 Mi decode-work and 64 Mi routing reservations. | Source-row shares weight declared input slots; output-cell shares weight owned columns. Other row/key/text/identity shares remain conservative per node. Aliases consume read/cell/work admission while borrowing retained artifact bytes. CSV codec-storage reservations cap encoded input; field/record/shape policies separately bound temporary ownership. |
+| Reports | 160 MiB compact encoded bytes; retained charge min(6 × requested encoded allowance, 768 MiB); 4,194,304 cells; 512 Mi logical report work. | Native node reports pool actual lengths/charges. Aggregate formatting, typed copying and each Save have separate owners. Row buffers charge 3 × requested capacity before reserve; text/entry charges precede copies. |
+| Typed public copies | 8 MiB final IPC, with the report counters above; each of three passes charges 64 bytes per visited cell, 2,048 per column and 4 per UTF-8 payload byte. | A failed copy exposes no output or Save capability and retains the accepted native graph and original refusal. |
+| Host evidence and publication | Host metadata: 65,536 identity bytes, 16 MiB replies, 65,536 records, 64 MiB source evidence, 1,024 functions and 2,049 version findings. Observer: 64 nodes, 1 MiB identity text, 1,024 stage records and 16 Saves. Publication: 64 nodes, 1 MiB paths, 16 MiB artifact bytes and 64 Mi logical work. | Borrowed evidence, the complete target set and every possible publication-report prefix are admitted before owned copies or the first publisher. Failures preserve original errors, actual entry order and prior writes; held Saves only republish retained bytes. |
+
+The implementations remain
+[capacity.rs](https://github.com/elong0527/yamaa/blob/main/rust/crates/yamaa-engine/src/capacity.rs),
+[producer_build.rs](https://github.com/elong0527/yamaa/blob/main/rust/crates/yamaa-engine/src/producer_build.rs),
+[report_projection.rs](https://github.com/elong0527/yamaa/blob/main/rust/crates/yamaa-adapters/src/report_projection.rs)
+and [host_limits.rs](https://github.com/elong0527/yamaa/blob/main/rust/crates/yamaa-adapters/src/host_limits.rs).
+These finite counters bound the admitted operation. Allocator overhead, already
+allocated foreign buffers, host representations and collector transport are
+separate quantities. In particular, separate owner charges must not be summed
+as a whole-Build storage allowance or equated with RSS.
+
+Both installed frontiers used exact source
+[`1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0`](https://github.com/elong0527/yamaa/commit/1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0):
+CPython 3.12.14 wheel `yamaa-0.4.0-cp312-abi3-linux_x86_64.whl` and R 4.6.1 source
+`yamaa_0.4.0.tar.gz`, installed outside all checkouts. Each passed all 27 authored
+cases and all 30 fresh children, including three callback observers. Independent
+generator truth checks every typed root cell and float bit, complete node/source
+inventories, empty diagnostics/logs, zero Build publication and every CSV from
+both held Saves. Each retains 270 original capacity-trace lines.
+
+| Observed maximum, one admission owner | Python | R | Selected ceiling |
+| --- | ---: | ---: | ---: |
+| Complete encoded Save report, bytes | 129,386,283 | 129,386,077 | 167,772,160 |
+| Largest conservative complete publication prefix, bytes | 129,386,361 | 129,386,155 | 167,772,160 |
+| Native pooled retained charge, bytes | 622,193,264 | 622,187,528 | 805,306,368 |
+| Native pooled report cells | 2,800,000 | 2,800,000 | 4,194,304 |
+| Native pooled report-work units | 258,567,168 | 258,566,212 | 536,870,912 |
+
+The largest report/charge case is the 100k depth-three producer. Its original row
+blocks request twelve 8,388,608-byte buffers and one 16,777,216-byte buffer;
+their 112 MiB total is charged before reserve. Independent compact-byte counting
+of 1,078 conservative code/location/entry variants over each original graph
+report stays within the complete publication-prefix ceiling for the authored
+paths and suffixes, without executing a candidate again. It does not bound
+arbitrary path metadata. Complete report and prefix observations replace the
+exploratory metadata reserve as evidence.
+The observed charge, cell and work maxima stay below their distinct ceilings;
+no limit was raised to obtain these passes. Whole-child Linux `wait4` peak RSS
+was 1,406,869,504 bytes for Python and 1,644,023,808 bytes for R, including worker
+collector transport. These observations deliberately establish no RSS budget.
+
+The [#2169 review record](https://github.com/elong0527/yamaa/pull/2169) keeps this
+source selection separate from native qualification. Original local installation
+receipts, requests, responses, complete views, reports, both Save artifacts,
+stderr charges, process records and generator bytes remain intact. Shared
+controls pass equality/one-more refusal, cumulative source ownership and checked
+shape/byte arithmetic; existing public Python/R controls preserve failed copies
+and failed Save prefixes.
+
+This local frontier is not relabeled as a newer source or a 21-tuple performance
+campaign. The original reviewed-branch native run
+[38503894937](https://github.com/elong0527/yamaa/actions/runs/38503894937), attempt 1,
+failed Windows shared-Rust protocol/fixture controls and cannot qualify the
+updated PR. Renew exact-head native qualification after the fixes, retain hosted
+frontier/campaign inputs and require [#2145](https://github.com/elong0527/yamaa/issues/2145)
+combined-main evidence before final release acceptance. Local scratch evidence
+has no durable publication identity; [#2144](https://github.com/elong0527/yamaa/issues/2144)
+and [#2154](https://github.com/elong0527/yamaa/issues/2154) retain/replay the original
+hosted inputs. Performance budgets and transition acceptance remain pending.
 
 ## Qualification and retained records
 
