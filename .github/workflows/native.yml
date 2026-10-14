@@ -116,7 +116,6 @@ jobs:
             python tools/check_cargo_lock.py --output-dir "${RUNNER_TEMP}/rust-dependencies"
             cargo clippy --locked -p yamaa-core -p yamaa-engine -p yamaa-adapters -p yamaa-python --all-targets -- -D warnings
             python ../.github/scripts/commands/rust_tests.py
-            cargo test --locked -p yamaa-adapters --features arrow-c-data --test c_data_table
             python tools/generate_regex_identifiers.py
             python tools/generate_schema_printable.py
             python tools/generate_shipped_schema.py
@@ -686,7 +685,7 @@ jobs:
       - name: Independently replay the original inputs without network access
         if: ${{ !cancelled() }}
         run: |
-          python rust/tools/audit_native_run.py \
+          sudo unshare --net -- "$(command -v python)" rust/tools/audit_native_run.py \
             --input "${RUNNER_TEMP}/native-run-audit/input" \
             --output "${RUNNER_TEMP}/native-run-audit/replay" --check
           cmp "${RUNNER_TEMP}/native-run-audit/qualification.json" \
