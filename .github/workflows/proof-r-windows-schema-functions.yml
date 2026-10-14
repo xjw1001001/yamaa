@@ -13,6 +13,35 @@ defaults:
     shell: bash
 
 jobs:
+  reproduce-original-helper:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ae799a5e96cb97c94dc123324e339616e36f769e
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: '4.6.1'
+      - name: Reproduce original SDK callback on actual Windows R
+        shell: Rscript {0}
+        run: |
+          source("rust/tests/project-programs/r/R/functions.R")
+          cat("R version:", R.version.string, "platform:", R.version$platform, "\n")
+          value <- 2 / 400
+          bits <- paste(sprintf("%02x", as.integer(rev(writeBin(value, raw(), size=8L,
+                                                               endian="little")))), collapse="")
+          stopifnot(identical(bits, "3f747ae147ae147b"))
+          cat("Original quotient binary64 bits:", bits, "\n")
+          cat("Original sprintf %.2f:", sprintf("%.2f", value), "\n")
+          for (sample in list(c(2,400,2,0.01), c(-2,400,2,-0.01),
+                              c(25,100,1,0.2), c(5,4,1,1.2))) {
+            actual <- project_ratio(sample[1],sample[2],as.integer(sample[3]),0,FALSE)
+            cat("Original helper args:", sample[1:3], "actual:", actual,
+                "authored expected:", sample[4], "equal:", identical(actual,sample[4]), "\n")
+          }
+          cat("Direct original-helper reproduction only; not installed facade or release qualification\n")
   inspect-original:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
