@@ -12,7 +12,7 @@ defaults:
   run:
     shell: bash
 env:
-  QUALIFIED_CONTROL_SOURCE: c04fcd408f6fac88e5812d2ab40d8b688ab1760a
+  QUALIFIED_CONTROL_SOURCE: b966c8b0c432d717ebc65c85f29dbb9097efce51
 jobs:
   r_preflight:
     name: performance-r-preflight (${{ matrix.os }})
@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          ref: c04fcd408f6fac88e5812d2ab40d8b688ab1760a
+          ref: b966c8b0c432d717ebc65c85f29dbb9097efce51
       - name: Verify the exact reviewed control source
         run: test "$(git rev-parse HEAD)" = "${QUALIFIED_CONTROL_SOURCE}"
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
