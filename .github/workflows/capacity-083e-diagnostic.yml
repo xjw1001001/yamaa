@@ -1,0 +1,45 @@
+name: Capacity 083e inheritance diagnostic
+on:
+  push:
+    branches: [codex/capacity-083e-diagnostic]
+permissions:
+  contents: read
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+      - name: Verify unchanged runtime source
+        run: |
+          python - <<'PY'
+          import subprocess
+          source = '083e0b35de8ec31b6eab1de7e2a6b231f04e1808'
+          allowed = {'.github/workflows/capacity-083e-diagnostic.yml', 'rust/crates/yamaa-adapters/examples/capacity_scope_probe.rs'}
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only', source, 'HEAD'], text=True).splitlines())
+          assert changed == allowed, changed
+          print('Diagnostic harness only; runtime source:', source)
+          PY
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: rust
+          shared-key: native-rust-ubuntu-24.04
+          save-if: false
+      - name: Install Rust
+        run: rustup toolchain install 1.90.0 --profile minimal
+      - name: Retain typed original-geometry diagnostics
+        working-directory: rust
+        run: |
+          set -o pipefail
+          mkdir -p "${RUNNER_TEMP}/capacity-083e-diagnostic"
+          git rev-parse HEAD > "${RUNNER_TEMP}/capacity-083e-diagnostic/diagnostic-source.txt"
+          printf '%s\n' '083e0b35de8ec31b6eab1de7e2a6b231f04e1808' > "${RUNNER_TEMP}/capacity-083e-diagnostic/runtime-source.txt"
+          cargo +1.90.0 run --locked -p yamaa-adapters --example capacity_scope_probe -- "${RUNNER_TEMP}/capacity-083e-diagnostic" 2>&1 | tee "${RUNNER_TEMP}/capacity-083e-diagnostic/process.log"
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        if: always()
+        with:
+          name: capacity-083e-inheritance-diagnostic
+          path: ${{ runner.temp }}/capacity-083e-diagnostic
+          if-no-files-found: error
