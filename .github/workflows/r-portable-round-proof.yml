@@ -1,0 +1,62 @@
+name: R portable decimal rounding component proof
+
+on:
+  push:
+    branches: [proof/cleanup-r-portable-round]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r-portable-round-component-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  component:
+    name: component R 4.6.1 (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      PROOF_DIRECTORY: ${{ runner.temp }}/r-portable-round-proof
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
+        with:
+          r-version: '4.6.1'
+          rtools-version: ${{ runner.os == 'Windows' && '45' || '' }}
+          use-public-rspm: true
+      - name: Preserve exact original and candidate sources
+        run: |
+          mkdir -p "$PROOF_DIRECTORY/library" "$PROOF_DIRECTORY/source"
+          git rev-parse HEAD > "$PROOF_DIRECTORY/source-head.txt"
+          git status --porcelain > "$PROOF_DIRECTORY/source-status.txt"
+          cp rust/tests/project-programs/r/R/functions.R "$PROOF_DIRECTORY/source/proposed-functions.R"
+          cp rust/tests/project-programs/r/tests/numeric-parity.R "$PROOF_DIRECTORY/source/proposed-numeric-parity.R"
+          cp .github/scripts/proof/r-original-functions.R "$PROOF_DIRECTORY/source/original-functions.R"
+          cp .github/scripts/proof/r-original-numeric-parity.R "$PROOF_DIRECTORY/source/original-numeric-parity.R"
+          cp .github/scripts/proof/r-portable-round.R "$PROOF_DIRECTORY/source/r-portable-round.R"
+          cp .github/workflows/r-portable-round-proof.yml "$PROOF_DIRECTORY/source/workflow.yml"
+      - name: Install only the authored R project component
+        run: |
+          set -o pipefail
+          R CMD INSTALL --library="$PROOF_DIRECTORY/library" rust/tests/project-programs/r 2>&1 | tee "$PROOF_DIRECTORY/install.log"
+      - name: Run original assertions and portable boundary controls
+        run: |
+          set -o pipefail
+          Rscript --vanilla .github/scripts/proof/r-portable-round.R "$PROOF_DIRECTORY" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" 2>&1 | tee "$PROOF_DIRECTORY/component.log"
+      - name: Retain component proof receipts and exact sources
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: r-portable-round-component-${{ matrix.os }}
+          path: ${{ runner.temp }}/r-portable-round-proof
+          if-no-files-found: error
