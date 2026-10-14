@@ -198,6 +198,33 @@ failed Build, failed Saves and no publication. The additional installed renewal
 therefore has 82 controls, including the two separate simple geometries. This
 disposition changes no arena ceiling, validation order or diagnostic projection.
 
+At native source
+[`847f7045`](https://github.com/elong0527/yamaa/commit/847f70457cc328cfac2d061c45072f3f0a0efe69),
+both fresh installed hosts passed all 82 controls: 67 complete successes and 15
+preserved refusals. Each also passed the unchanged 27-case frontier and all 30
+fresh children, retaining 270 original capacity-trace lines. These are untimed
+correctness observations. The separately pinned optimized harness is
+[`c04fcd40`](https://github.com/elong0527/yamaa/commit/c04fcd408f6fac88e5812d2ab40d8b688ab1760a);
+independent truth comes from `847f7045`. Harness-source proof does not establish
+native-source qualification. The clinical width controls above each use three
+source rows, one key and one three-column source; their column counts are not a
+promise at every row count or expression complexity.
+
+Installed oversized CSV/scalar/output refusals expose generic
+`build/result_projection`; complex inherited refusals expose
+`prepare/issue_projection`, with a null observations report. Their reached
+public issues, failed Saves and absence of publication are retained as observed.
+Named typed CSV/scalar/output boundary controls and the actual typed inheritance
+control establish the underlying admission owners; unavailable installed counter
+or required values remain unavailable. The
+[`847f7045` qualification](https://github.com/elong0527/yamaa/actions/runs/38533170653)
+passed all three strict R hosts but failed a Rust fixture still expecting the
+former 64-column IPC boundary. The reviewed test-only renewal exercises 257
+columns against the current 256-column boundary, allowing 512 solely in that
+fixture's compiler while preserving its original ownership and failed-Save
+assertions. Adoption remains pending full qualification and independent replay
+at the renewed source composed with current resource-path fixes.
+
 On original source `1ac79ba5`, both installed hosts ran 67 additional independently
 authored controls: 23 complete successes and 44 preserved refusals on each host.
 The controls cover compiler/projection/input counts, typed and unread physical
