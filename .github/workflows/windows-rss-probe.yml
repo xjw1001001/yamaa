@@ -31,3 +31,10 @@ jobs:
       - name: Compare launched process and actual interpreter ownership
         run: |
           & "$env:RUNNER_TEMP\rss-probe-venv\Scripts\python.exe" -I .github/scripts/ci/windows_rss_probe.py
+      - name: Exercise repaired broker and original refusal controls
+        run: |
+          uv pip install --python "$env:RUNNER_TEMP\rss-probe-venv\Scripts\python.exe" PyYAML==6.0.3
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:RUNNER_TEMP\rss-probe-venv\Scripts\python.exe" -m unittest discover -s rust/tests -p test_child_peak_rss.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:RUNNER_TEMP\rss-probe-venv\Scripts\python.exe" -m unittest discover -s rust/tests -p test_audit_public_performance.py -v
