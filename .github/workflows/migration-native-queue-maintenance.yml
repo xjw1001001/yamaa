@@ -22,7 +22,7 @@ jobs:
           python - <<'PY'
           import json, subprocess
           from pathlib import Path
-          reviewed = [{"id":38527797057,"sha":"083e0b35de8ec31b6eab1de7e2a6b231f04e1808","branch":"qualification/issue-2142-final","reason":"known failed capacity candidate; original shared Rust, R and installed Python failures retained before redundant queued lanes are cancelled"}]
+          reviewed = [{"id":38528013135,"sha":"ab6f9e2d6397a14eba042fc7a4cd477bac769c7f","branch":"main","reason":"superseded incomplete intermediate main; reviewed resource correction is merged in its descendant and has a separate completed 97-lane qualification; preserve original jobs/artifacts and free current-main concurrency without accepting this canceled run"}]
           repository = 'elong0527/yamaa'
           root = Path('superseded-native-records')
           root.mkdir()
@@ -37,6 +37,23 @@ jobs:
               return value
           def save(path, value):
               path.write_text(json.dumps(retained(value), indent=2) + '\n')
+          current_sha = 'cc232323d4b2c9930378ea5a0a61345eaafc9310'
+          current_run_id = 38536875427
+          current = api(f'repos/{repository}/branches/main')
+          save(root/'reviewed-current-main.json', current)
+          assert current['commit']['sha'] == current_sha
+          replacement = api(f'repos/{repository}/actions/runs/{current_run_id}')
+          save(root/'reviewed-current-main-run.json', replacement)
+          assert replacement['head_sha'] == current_sha
+          assert replacement['head_branch'] == 'main'
+          assert replacement['event'] == 'push'
+          assert replacement['path'] == '.github/workflows/native.yml'
+          assert replacement['repository']['full_name'] == repository
+          assert replacement['head_repository']['full_name'] == repository
+          ancestry = api(f'repos/{repository}/compare/{reviewed[0]["sha"]}...{current_sha}')
+          save(root/'reviewed-main-ancestry.json', ancestry)
+          assert ancestry['status'] == 'ahead'
+          assert ancestry['merge_base_commit']['sha'] == reviewed[0]['sha']
           for approved in reviewed:
               prefix = f"repos/{repository}/actions/runs/{approved['id']}"
               run = api(prefix)
