@@ -23,8 +23,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      PROOF_DIRECTORY: ${{ runner.temp }}/r-portable-round-proof
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,6 +34,7 @@ jobs:
           use-public-rspm: true
       - name: Preserve exact original and candidate sources
         run: |
+          PROOF_DIRECTORY="${RUNNER_TEMP}/r-portable-round-proof"
           mkdir -p "$PROOF_DIRECTORY/library" "$PROOF_DIRECTORY/source"
           git rev-parse HEAD > "$PROOF_DIRECTORY/source-head.txt"
           git status --porcelain > "$PROOF_DIRECTORY/source-status.txt"
@@ -47,10 +46,12 @@ jobs:
           cp .github/workflows/r-portable-round-proof.yml "$PROOF_DIRECTORY/source/workflow.yml"
       - name: Install only the authored R project component
         run: |
+          PROOF_DIRECTORY="${RUNNER_TEMP}/r-portable-round-proof"
           set -o pipefail
           R CMD INSTALL --library="$PROOF_DIRECTORY/library" rust/tests/project-programs/r 2>&1 | tee "$PROOF_DIRECTORY/install.log"
       - name: Run original assertions and portable boundary controls
         run: |
+          PROOF_DIRECTORY="${RUNNER_TEMP}/r-portable-round-proof"
           set -o pipefail
           Rscript --vanilla .github/scripts/proof/r-portable-round.R "$PROOF_DIRECTORY" "$GITHUB_SHA" "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$RUNNER_OS" 2>&1 | tee "$PROOF_DIRECTORY/component.log"
       - name: Retain component proof receipts and exact sources
