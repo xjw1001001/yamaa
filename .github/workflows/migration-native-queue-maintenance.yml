@@ -1,0 +1,70 @@
+name: Superseded migration native queue maintenance
+
+on:
+  push:
+    branches: ['coordination/issue-1969-native-queue']
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cancel-reviewed-superseded-runs:
+    if: github.repository == 'elong0527/yamaa'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Preserve exact original metadata before cancelling superseded work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          reviewed = [{"id":38509335925,"sha":"7101f20656d345ef9985d41522051ae84266730d","branch":"codex/migration-issue-2144","status":"queued"},{"id":38508902215,"sha":"1a0520ee42d1116b8bd576edc5fb2c92a3efc34a","branch":"codex/migration-issue-2147","status":"queued"},{"id":38507542592,"sha":"a33b255438f58a8abaf9763a0f70fc20d9909835","branch":"codex/migration-issue-2143","status":"queued"},{"id":38507430920,"sha":"4e2e9fa4a7df52f2914b12288c9989ad416873db","branch":"codex/migration-issue-2145","status":"queued"},{"id":38506319813,"sha":"b4cf84e7d78cf2191b81ceb65ad22f7c32509a97","branch":"qualification/issue-2141","status":"queued"},{"id":38505411132,"sha":"b4cf84e7d78cf2191b81ceb65ad22f7c32509a97","branch":"codex/migration-issue-2141","status":"queued"},{"id":38503894937,"sha":"1ac79ba521b2e16c6c0ef2784df9c03ae722a1b0","branch":"qualification/issue-2142","status":"queued"},{"id":38503400832,"sha":"d8cb226a613f0ee26cac400e2baeecbbf2ba11cd","branch":"main","status":"queued"}]
+          repository = 'elong0527/yamaa'
+          root = Path('superseded-native-records')
+          root.mkdir()
+          def api(endpoint, *arguments):
+              return json.loads(subprocess.check_output(
+                  ['gh', 'api', endpoint, *arguments], text=True))
+          def retained(value):
+              if isinstance(value, dict):
+                  return {k: retained(v) for k,v in value.items() if k != 'digest'}
+              if isinstance(value, list):
+                  return [retained(v) for v in value]
+              return value
+          def save(path, value):
+              path.write_text(json.dumps(retained(value), indent=2) + '\n')
+          for approved in reviewed:
+              prefix = f"repos/{repository}/actions/runs/{approved['id']}"
+              run = api(prefix)
+              directory = root / str(approved['id'])
+              directory.mkdir()
+              save(directory/'before-run.json', run)
+              assert run['id'] == approved['id']
+              assert run['head_sha'] == approved['sha']
+              assert run['head_branch'] == approved['branch']
+              assert run['path'] == '.github/workflows/native.yml'
+              assert run['repository']['full_name'] == repository
+              assert run['head_repository']['full_name'] == repository
+              save(directory/'original-jobs.json', api(
+                  prefix + f"/attempts/{run['run_attempt']}/jobs?per_page=100",
+                  '--paginate', '--slurp'))
+              save(directory/'original-artifacts.json', api(
+                  prefix + '/artifacts?per_page=100', '--paginate', '--slurp'))
+              if run['status'] != 'completed':
+                  assert run['status'] in ('queued', 'pending', 'in_progress', 'waiting', 'requested')
+                  subprocess.run(['gh', 'api', '--method', 'POST', prefix+'/cancel'], check=True)
+              save(directory/'after-run.json', api(prefix))
+          PY
+      - name: Retain original failures, identities and cancellation receipts
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4
+        with:
+          name: superseded-migration-native-records
+          path: superseded-native-records
+          retention-days: 90
+          if-no-files-found: error
+
