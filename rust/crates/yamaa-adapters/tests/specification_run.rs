@@ -938,9 +938,9 @@ fn actual_capture_observations_survive_errors_and_distinguish_cached_reads() {
             limit: usize,
         ) -> Result<Arc<[u8]>, Self::Error> {
             assert_eq!((&*source.name, &*source.path), ("LB", "input/lb.csv"));
-            // The cumulative source owner has 16 MiB; the CSV decoder keeps
-            // its independent 8 MiB per-file admission after capture.
-            assert_eq!(limit, 16_777_216);
+            // The cumulative source owner has 32 MiB; the CSV decoder keeps
+            // its independent 16 MiB per-file admission after capture.
+            assert_eq!(limit, 33_554_432);
             self.requests += 1;
             if self.fail {
                 return Err("resource_path_missing");

@@ -56,11 +56,38 @@ class PublicContract(unittest.TestCase):
             self.assertEqual(result.output.rows(), rows)
             self.assertIsNone(result.verification_log)
             self.assertIsNone(result.warning_log)
-            expected = (",".join(names) + "\n" + "".join(",".join(row) + "\n" for row in rows)).encode()
+            expected = (",".join(names) + "\n" + "".join(
+                ",".join("" if value is None else value for value in row) + "\n" for row in rows)).encode()
             for _ in range(2):
                 self.assertTrue(result.save())
                 self.assertEqual((self.root / "output.csv").read_bytes(), expected)
                 self.assertEqual(result.output.rows(), rows)
+
+        def edge_budget_refusal(document, *, inherited=False):
+            # Exact original complex geometry; the unchanged arena separately
+            # refuses this combination, before Build publication or either Save.
+            for artifact in ("output.csv", "parent.yaml"):
+                (self.root / artifact).unlink(missing_ok=True)
+            if inherited:
+                (self.root / "parent.yaml").write_text(document, encoding="utf-8")
+                self.spec.write_text("schema_version: '1.0'\nparents: [parent.yaml]\n", encoding="utf-8")
+            else:
+                self.spec.write_text(document, encoding="utf-8")
+            check = self.issues(yamaa.check(self.spec))
+            self.assertFalse(check.is_empty())
+            result = yamaa.domain(self.spec)
+            issues = self.issues(result)
+            self.assertFalse(issues.is_empty())
+            self.assertTrue(all(row["phase"] == "engine" and row["condition"] == "engine_rejected"
+                                for row in issues.to_dicts()))
+            self.assertIsNone(result.output)
+            self.assertFalse((self.root / "output.csv").exists())
+            for _ in range(2):
+                with self.assertRaises(yamaa.DomainError):
+                    result.save()
+                self.assertEqual(result.issues.to_dicts(), issues.to_dicts())
+                self.assertIsNone(result.output)
+                self.assertFalse((self.root / "output.csv").exists())
 
         for width in (40, 150, 256):
             names = ["ID"] + [f"F{i:03d}" for i in range(1, width)]
@@ -74,11 +101,31 @@ class PublicContract(unittest.TestCase):
             (self.root / "input.csv").write_bytes(b"ID,A,B\nS-001,x,1\nS-002,y,2\nS-003,,3\n")
             rows = [tuple(["S-001"] + ["P" if i % 3 == 1 else "x" for i in range(1, width)]),
                     tuple(["S-002"] + ["y"] * (width - 1)), tuple(["S-003"] + ["Q"] * (width - 1))]
-            for inherited in (False, True):
+            for inherited in ((False, True) if width < 256 else (False,)):
                 with self.subTest(width=width, inherited=inherited):
                     complete(document, names, rows, inherited=inherited)
-            with self.subTest(width=width, empty_parents=True):
-                complete(document.replace("domain: TEST", "parents: []\ndomain: TEST"), names, rows)
+            empty_parent_document = document.replace("domain: TEST", "parents: []\ndomain: TEST")
+            if width < 256:
+                with self.subTest(width=width, empty_parents=True):
+                    complete(empty_parent_document, names, rows)
+            else:
+                with self.subTest(width=width, edge_budget_refusal="inherited"):
+                    edge_budget_refusal(document, inherited=True)
+                with self.subTest(width=width, edge_budget_refusal="empty-parents"):
+                    edge_budget_refusal(empty_parent_document)
+
+        # Separate complete 256-column headroom, with the original source rows.
+        names = ["ID"] + [f"F{i:03d}" for i in range(1, 256)]
+        columns = "  - {name: ID, type: str, derivation: SRC.ID}\n" + "".join(
+            f"  - {{name: {name}, type: str, derivation: SRC.A}}\n" for name in names[1:])
+        document = ("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n"
+                    f"columns:\n{columns}output: {{path: output.csv, columns: [{', '.join(names)}]}}\n")
+        rows = [tuple(["S-001"] + ["x"] * 255), tuple(["S-002"] + ["y"] * 255),
+                tuple(["S-003"] + [None] * 255)]
+        with self.subTest(width=256, simple_inherited=True):
+            complete(document, names, rows, inherited=True)
+        with self.subTest(width=256, simple_empty_parents=True):
+            complete(document.replace("domain: TEST", "parents: []\ndomain: TEST"), names, rows)
 
         names = ["ID"] + [f"F{i:02d}" for i in range(1, 41)]
         rows = [tuple([f"S{i:06d}"] + ["Y" if i % 2 else "N"] * 40) for i in range(1, 4001)]

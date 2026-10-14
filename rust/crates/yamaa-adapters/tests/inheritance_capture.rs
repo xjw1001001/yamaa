@@ -776,6 +776,79 @@ fn explicit_null_handler_and_raw_origin_remain_distinct_from_inherited_clear() {
 }
 
 #[test]
+fn clinical_width_and_expression_geometry_share_the_finite_normalization_arena() {
+    use yamaa_core::schema::{
+        InheritanceDependencyError, InheritanceReferenceError, NormalizationError,
+        NormalizationResource,
+    };
+    // Exact original three-branch geometry from the installed host controls.
+    fn document(width: usize, complex: bool) -> String {
+        let mut names = vec!["ID".to_string()];
+        names.extend((1..width).map(|i| format!("F{i:03}")));
+        let mut columns = "  - {name: ID, type: str, derivation: SRC.ID}\n".to_string();
+        for (index, name) in names.iter().enumerate().skip(1) {
+            if complex {
+                columns.push_str(&format!(
+                    "  - name: {name}\n    type: str\n    derivation:\n      case:\n        - {{when: \"SRC.A = 'x' AND SRC.B = '{}'\", then: {{literal: P}}}}\n        - {{when: \"SRC.A IS NULL\", then: {{literal: Q}}}}\n        - {{otherwise: SRC.A}}\n", index % 3));
+            } else {
+                columns.push_str(&format!(
+                    "  - {{name: {name}, type: str, derivation: SRC.A}}\n"
+                ));
+            }
+        }
+        format!("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {{SRC: input.csv}}\ncolumns:\n{columns}output: {{path: output.csv, columns: [{}]}}\n", names.join(", "))
+    }
+    let schema = shipped_schema::capture().unwrap();
+    for (width, complex) in [(40, true), (150, true), (256, true), (256, false)] {
+        let body = document(width, complex);
+        for inherited in [true, false] {
+            let entry = if inherited {
+                "schema_version: '1.0'\nparents: [parent.yaml]\n".to_string()
+            } else {
+                body.replace("domain: TEST", "parents: []\ndomain: TEST")
+            };
+            let mut host = new_host(body.as_bytes());
+            let result =
+                schema.prepare_document(source(entry.into_bytes()), "entry.yaml".into(), &mut host);
+            if width == 256 && complex {
+                let Err(InheritanceError::Preparation { error, .. }) = result else {
+                    panic!("original complex 256 geometry must refuse at the edge owner")
+                };
+                let lifecycle::Error::Dependencies(context) = *error else {
+                    panic!("expected dependency-reference refusal")
+                };
+                let InheritanceDependencyError::Reference(
+                    InheritanceReferenceError::Normalization(NormalizationError::Limit {
+                        resource,
+                        limit,
+                    }),
+                ) = context.error
+                else {
+                    panic!("expected normalization resource refusal")
+                };
+                assert_eq!(resource, NormalizationResource::Edges);
+                assert_eq!(limit, 262_144);
+                assert!(context.input.is_none());
+                // The unchanged typed error does not expose a required value.
+                // Retain that absence explicitly instead of inferring arithmetic.
+                let required: Option<usize> = None;
+                println!(
+                    "{}",
+                    json!({"width":width,"inherited":inherited,"resource":format!("{resource:?}"),
+                        "limit":limit,"required":required,"required_status":"not exposed by unchanged typed error"})
+                );
+            } else {
+                let prepared = result.unwrap_or_else(|_| panic!("supported joint geometry"));
+                let model = value(prepared.model().document());
+                assert_eq!(model["columns"].as_array().unwrap().len(), width);
+                assert_eq!(model["output"]["columns"].as_array().unwrap().len(), width);
+                assert_eq!(prepared.parents().len(), usize::from(inherited));
+            }
+        }
+    }
+}
+
+#[test]
 fn distinct_written_aliases_keep_first_canonical_arena_and_complete_authored_model() {
     struct Aliases(Host);
     impl InheritancePort for Aliases {

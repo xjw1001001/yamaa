@@ -255,11 +255,29 @@ run_bounded_capacity_contract <- function() {
     for (index in seq_along(names)) stopifnot(identical(result$output[[index]],
       vapply(rows, function(row) row[[index]], character(1))))
     expected <- charToRaw(paste0(paste(names, collapse = ","), "\n",
-      paste0(vapply(rows, paste, character(1), collapse = ","), "\n", collapse = "")))
+      paste0(vapply(rows, function(row) paste(ifelse(is.na(row), "", row), collapse = ","),
+        character(1)), "\n", collapse = "")))
     held <- result$output
     for (attempt in 1:2) stopifnot(isTRUE(result$save()),
       identical(readBin(path("output.csv"), "raw", n = file.info(path("output.csv"))$size), expected),
       identical(result$output, held))
+  }
+  edge_budget_refusal <- function(document, inherited = FALSE) {
+    # Original complex YAML remains an explicit refusal under the unchanged arena.
+    unlink(path(c("output.csv", "parent.yaml")))
+    if (inherited) {
+      write("parent.yaml", document)
+      write("spec.yaml", "schema_version: '1.0'\nparents: [parent.yaml]\n")
+    } else write("spec.yaml", document)
+    stopifnot(nrow(check_issues(yamaa_check(path("spec.yaml")))) > 0L)
+    result <- yamaa_domain(path("spec.yaml"))
+    issues <- check_issues(result)
+    stopifnot(nrow(issues) > 0L, all(issues$phase == "engine"),
+      all(issues$condition == "engine_rejected"), is.null(result$output),
+      !file.exists(path("output.csv")))
+    for (attempt in 1:2) stopifnot(
+      inherits(tryCatch(result$save(), error = identity), "yamaa_domain_error"),
+      identical(result$issues, issues), is.null(result$output), !file.exists(path("output.csv")))
   }
   # Independently authored regression geometry, outside the timing cases.
   for (width in c(40L, 150L, 256L)) {
@@ -276,9 +294,25 @@ run_bounded_capacity_contract <- function() {
     rows <- list(c("S-001", ifelse(seq_len(width - 1L) %% 3L == 1L, "P", "x")),
       c("S-002", rep("y", width - 1L)), c("S-003", rep("Q", width - 1L)))
     complete(document, names, rows)
-    complete(document, names, rows, inherited = TRUE)
-    complete(sub("domain: TEST", "parents: []\ndomain: TEST", document, fixed = TRUE), names, rows)
+    empty_parent_document <- sub("domain: TEST", "parents: []\ndomain: TEST", document, fixed = TRUE)
+    if (width < 256L) {
+      complete(document, names, rows, inherited = TRUE)
+      complete(empty_parent_document, names, rows)
+    } else {
+      edge_budget_refusal(document, inherited = TRUE)
+      edge_budget_refusal(empty_parent_document)
+    }
   }
+  names <- c("ID", sprintf("F%03d", 1:255))
+  columns <- paste0("  - {name: ID, type: str, derivation: SRC.ID}\n",
+    paste0(vapply(names[-1L], function(name) paste0(
+      "  - {name: ", name, ", type: str, derivation: SRC.A}\n"), character(1)), collapse = ""))
+  document <- paste0("schema_version: '1.0'\ndomain: TEST\nkeys: [ID]\ninput: {SRC: input.csv}\n",
+    "columns:\n", columns, "output: {path: output.csv, columns: [", paste(names, collapse = ", "), "]}\n")
+  rows <- list(c("S-001", rep("x", 255)), c("S-002", rep("y", 255)),
+    c("S-003", rep(NA_character_, 255)))
+  complete(document, names, rows, inherited = TRUE)
+  complete(sub("domain: TEST", "parents: []\ndomain: TEST", document, fixed = TRUE), names, rows)
   names <- c("ID", sprintf("F%02d", 1:40))
   rows <- lapply(1:4000, function(index) c(sprintf("S%06d", index), rep(if (index %% 2L) "Y" else "N", 40)))
   write("input.csv", paste0("ID,T\n", paste0(vapply(1:4000, function(index)

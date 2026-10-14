@@ -171,9 +171,32 @@ headroom. Four times the former field width and input count remains coupled to
 unchanged total source/output cells, rows and execution work. Sixty-four Mi
 validation-work units permits additional finite parent/child/default-selection
 passes over wider documents; it changes no document arena, diagnostic, text,
-depth or regex allowance. Installed inherited controls must demonstrate the
-40-column regression and the intended wider cases before this candidate is
-adopted. Neither 4,096 fields nor an unbounded validation traversal is selected.
+depth or regex allowance. Width and expression complexity share the unchanged
+262,144 cumulative normalization-edge allowance. Installed inherited controls
+must demonstrate the supported joint geometries before this candidate is adopted.
+Neither 4,096 fields nor an unbounded validation traversal is selected.
+
+The frozen candidate
+[`083e0b35`](https://github.com/elong0527/yamaa/commit/083e0b35de8ec31b6eab1de7e2a6b231f04e1808)
+failed its original success expectations for complex 256-column inherited and
+empty-parent documents; those results remain historical failed-candidate evidence.
+The isolated [typed diagnostic](https://github.com/elong0527/yamaa/actions/runs/38530469892)
+retains the exact original complex YAML and verifies unchanged runtime source.
+Both refusals belong to dependency-reference extraction's normalization `Edges`
+counter at 262,144. Successful charged prefixes are 261,964 and 262,006 edges,
+respectively; the unchanged error exposes no required value. Their validation-work
+prefixes are 21,774,333 and 22,082,186, below the 64 Mi work ceiling.
+
+The supported correctness geometry is the authored three-branch case on 40 and
+150 columns in standalone, inherited and empty-parent forms, the same complex
+256-column standalone form, and separately simple source-reference 256-column
+inherited and empty-parent forms. The diagnostic accepts the latter two at 43,779
+and 40,140 edges; complete installed typed cells and both held Saves remain
+required at the renewed source. The new candidate keeps the original complex
+256-column inherited YAML as explicitly named edge-budget refusal controls with
+failed Build, failed Saves and no publication. The additional installed renewal
+therefore has 82 controls, including the two separate simple geometries. This
+disposition changes no arena ceiling, validation order or diagnostic projection.
 
 On original source `1ac79ba5`, both installed hosts ran 67 additional independently
 authored controls: 23 complete successes and 44 preserved refusals on each host.

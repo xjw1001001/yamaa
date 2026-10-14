@@ -91,8 +91,10 @@ fn combined_quotas_are_configurable_and_reset_per_attempt() {
     let donor = integers(&[&[3]]);
     let secondary = vec![donor.as_slice(); 8];
     let plan = plan(schema(ColumnType::Int), 8, RowMode::Records);
-    let mut budget = ExecutionBudget::default();
-    budget.max_sources = 8;
+    let mut budget = ExecutionBudget {
+        max_sources: 8,
+        ..ExecutionBudget::default()
+    };
     assert!(matches!(
         execute_dataset_with_budget(&plan, &input, &secondary, budget),
         Err(TableError::ShapeLimit)
