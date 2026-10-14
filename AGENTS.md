@@ -1,5 +1,14 @@
 # Conventions
 
+## Find the current commands and contracts
+
+Run `make help` at the repository root for supported checks and their prerequisites.
+`make check-fast` provides repository feedback; installed-host checks and complete
+native release qualification are separate routes. Local targets and CI share the
+owned scripts under `.github/scripts/commands/` and the canonical `rust/tools/`.
+Current architecture/development and release gates live in `docs/development.md`
+and `docs/release.md`; language contracts remain in `rules/` and `yaml/`.
+
 ## The project name is written `yamaa`, never `YAMAA`
 
 Lower case, always, including at the start of a sentence, in headings, in page
@@ -58,7 +67,9 @@ canonical source file. Build and test commands live in
 
 ## Rust and host APIs
 
-`rust/README.md` describes the crate boundaries and local verification commands.
+`docs/development.md` describes the crate boundaries and local verification
+commands; `rust/README.md` is the Rust entry point. `docs/release.md` owns current
+API/math/platform/rollback decisions and pending migration gates.
 Language contracts live in `rules/`, and host usage lives in `python/README.md`
 and `R/yamaa/README.md`. The declared API inventory is
 `rust/qualification/release-api.json`; check it from the repository root with
