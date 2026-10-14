@@ -38,16 +38,17 @@ jobs:
               (11906851446, 115936646163, 'ubuntu-24.04', 1822430),
               (11907500159, 115936646066, 'macos-15', 1822453),
               (11907605538, 115936646003, 'windows-latest', 1827048),
+              (11907659764, 115951953130, 'audit-record', 46061),
           ]:
               artifact = read(f'actions/artifacts/{artifact_id}')
               job = read(f'actions/jobs/{job_id}')
               assert artifact['id'] == artifact_id and not artifact['expired']
-              assert artifact['name'] == 'public-conformance-r-' + host
+              assert artifact['name'] == ('native-run-audit-record' if host == 'audit-record' else 'public-conformance-r-' + host)
               assert artifact['size_in_bytes'] == size
               assert artifact['workflow_run']['id'] == run['id']
               assert artifact['workflow_run']['head_sha'] == source
               assert job['run_id'] == run['id'] and job['run_attempt'] == 1
-              assert job['name'] == 'native-r (' + host + ')' and job['conclusion'] == 'failure'
+              assert job['name'] == ('native-run-evidence-audit' if host == 'audit-record' else 'native-r (' + host + ')') and job['conclusion'] == 'failure'
               assert when(job['started_at']) <= when(artifact['created_at']) <= when(job['completed_at'])
               print(json.dumps({'artifact': artifact_id, 'job': job_id, 'source': source,
                                'run': run['id'], 'attempt': 1, 'host': host, 'bytes': size}))
@@ -55,7 +56,7 @@ jobs:
       - name: Download only authenticated immutable artifact IDs
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          artifact-ids: 11906851446,11907500159,11907605538
+          artifact-ids: 11906851446,11907500159,11907605538,11907659764
           run-id: 38588427252
           github-token: ${{ github.token }}
           path: original-r-artifacts
@@ -84,6 +85,10 @@ jobs:
                   rows = [row for row in document['benchmarks'] if row.get('example') == 'negative-path-symlink']
                   if rows:
                       print('ORIGINAL COMPARISON', path.as_posix(), json.dumps(rows))
+          for path in sorted(root.rglob('qualification.json')):
+              document = json.loads(path.read_bytes())
+              print('ORIGINAL AUDIT', path.as_posix(), 'KEYS', sorted(document))
+              print(json.dumps(document))
           expected = Path('benchmarks/negative-path-symlink/expected/error.yaml')
           print('ORIGINAL AUTHORED EXPECTED BYTES', expected.read_bytes().decode('utf-8'))
           PY
