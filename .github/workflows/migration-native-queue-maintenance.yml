@@ -37,8 +37,8 @@ jobs:
               return value
           def save(path, value):
               path.write_text(json.dumps(retained(value), indent=2) + '\n')
-          current_sha = 'cc232323d4b2c9930378ea5a0a61345eaafc9310'
-          current_run_id = 38536875427
+          current_sha = '2f171f90733fcc8790c8848e59a5c63ed9627587'
+          current_run_id = 38537503265
           current = api(f'repos/{repository}/branches/main')
           save(root/'reviewed-current-main.json', current)
           assert current['commit']['sha'] == current_sha
