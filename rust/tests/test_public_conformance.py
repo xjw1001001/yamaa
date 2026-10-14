@@ -540,8 +540,14 @@ class PublicConformance(unittest.TestCase):
         expectations = judge.load_metamorphic_expectations(ROOT.parent / "benchmarks")
         names = {e["name"] for e in corpus["examples"]}
         # 47 as reviewed in #2291, minus the three dependency-cycle entries
-        # whose fix landed in #2293.
-        self.assertEqual(len(expectations), 44)
+        # fixed by #2293 and the three condition/ODM entries fixed by #2292.
+        self.assertEqual(len(expectations), 41)
+        for benchmark in (
+            "negative-lookup-mismatched",
+            "negative-odm-context",
+            "negative-review-unknown-date",
+        ):
+            self.assertNotIn((benchmark, "empty_child"), expectations)
         for (benchmark, check), item in expectations.items():
             self.assertIn(benchmark, names)
             self.assertIn(check, {"empty_child", "key_order"})

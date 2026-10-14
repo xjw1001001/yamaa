@@ -275,7 +275,9 @@ def emit_plan(fixtures, output):
         _, contents = example_variants(fixtures, example)
         for relative, text in contents.items():
             for base in (
-                output / "variants", output / "r-inputs", output / "r-variant-inputs"
+                output / "variants",
+                output / "r-inputs",
+                output / "r-variant-inputs",
             ):
                 target = base / example["name"] / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -963,7 +965,11 @@ def compare(fixtures, observed, output, ratchet=None):
                 **counts,
                 "ratchet": inventory["ratchet"],
                 "failures": [
-                    {"example": r["example"], "verdict": r["verdict"], "findings": r["findings"]}
+                    {
+                        "example": r["example"],
+                        "verdict": r["verdict"],
+                        "findings": r["findings"],
+                    }
                     for r in results
                     if r["verdict"] not in ("pass", "excluded")
                 ],
