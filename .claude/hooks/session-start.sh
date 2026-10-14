@@ -14,9 +14,17 @@ WORKSPACE="$ROOT/rust"
 # Full debug info gives each of the ~240 integration-test binaries about
 # 100 MB and a plain `cargo test` overruns the 30 GB session disk. Debug
 # information changes nothing CI asserts; panic locations are still reported.
-export CARGO_PROFILE_DEV_DEBUG=0
+session_env=(CARGO_PROFILE_DEV_DEBUG=0)
+
+# The VM sets no locale, so R runs in the C locale: R CMD check then fails on
+# the package's UTF-8 fixtures. Use C.UTF-8, as GitHub's runners do.
+if [ -z "${LANG:-}${LC_ALL:-}" ]; then
+  session_env+=(LANG=C.UTF-8)
+fi
+
+export "${session_env[@]}"
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
-  echo 'export CARGO_PROFILE_DEV_DEBUG=0' >> "$CLAUDE_ENV_FILE"
+  printf 'export %s\n' "${session_env[@]}" >> "$CLAUDE_ENV_FILE"
 fi
 
 # Install the toolchain and components rust/rust-toolchain.toml pins, and make
@@ -48,24 +56,31 @@ rustup default "$channel" >&2
 cd "$WORKSPACE"
 cargo fetch --locked >&2
 
-# Compile the default-member tests and the CI clippy set in the background, at
-# low priority, so the session starts at once. Cargo holds a lock on the build
-# directory, so a cargo command started meanwhile waits and then reuses the
-# result. Set YAMAA_WARM_BUILD=0 in the environment to skip it.
+# Create python/.venv, then compile the default-member tests and the CI clippy
+# set, in the background at low priority so the session starts at once. Cargo
+# holds a lock on the build directory, so a cargo command started meanwhile
+# waits and then reuses the result. Set YAMAA_WARM_BUILD=0 in the environment
+# to skip it.
 log=/tmp/yamaa-warm-build.log
 if [ "${YAMAA_WARM_BUILD:-1}" != 0 ]; then
   setsid nice -n 10 bash -c '
     set -x
+    uv sync --project ../python --locked --no-install-project
     cargo test --locked --no-run
     cargo clippy --locked -p yamaa-core -p yamaa-engine -p yamaa-adapters -p yamaa-python --all-targets -- -D warnings
-    uv sync --project ../python --locked --no-install-project
     echo "warm build finished"
   ' < /dev/null > "$log" 2>&1 &
-  warm="A background warm build is compiling the default-member tests, then the CI clippy set (log: $log). Cargo commands in rust/ wait for its build lock and then reuse its output. Select tests at workspace scope to reuse it (cargo test --locked --test rounding); -p yamaa-core or -p yamaa-engine alone resolves features differently and recompiles."
+  warm="A background warm build is creating python/.venv, then compiling the default-member tests and the CI clippy set (log: $log). Cargo commands in rust/ wait for its build lock and then reuse its output. Select tests at workspace scope to reuse it (cargo test --locked --test rounding); -p yamaa-core or -p yamaa-engine alone resolves features differently and recompiles."
 else
   warm="The background warm build is off (YAMAA_WARM_BUILD=0)."
 fi
 
+# R comes from the environment's setup script, when it installs it.
+r_note=""
+if command -v Rscript > /dev/null; then
+  r_note=" R $(Rscript -e 'cat(format(getRversion()))') is installed. R/yamaa cannot be installed in place: stage it as .github/workflows/r.yml does, running rust/tools/stage_r_package.py with python/.venv/bin/python (it needs py-yaml12), then R CMD build and R CMD INSTALL --library=<dir>. The install compiles the engine in release mode, about 3 minutes."
+fi
+
 cat <<EOF
-Rust engine session setup: toolchain $channel is the default and rust/Cargo.lock dependencies are fetched. CARGO_PROFILE_DEV_DEBUG=0 keeps test builds within the 30 GB disk; do not override it for whole-workspace builds. $warm
+Rust engine session setup: toolchain $channel is the default and rust/Cargo.lock dependencies are fetched. CARGO_PROFILE_DEV_DEBUG=0 keeps test builds within the 30 GB disk; do not override it for whole-workspace builds. $warm$r_note
 EOF
