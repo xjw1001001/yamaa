@@ -32,6 +32,29 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.12'
+      - name: Diagnose explicit UTF-8 fixture reading with original expectations
+        run: |
+          python - <<'PY'
+          import json, locale, os, sys
+          from pathlib import Path
+          path=Path('rust/tests/test_public_lifecycle_view_retention.py')
+          original=path.read_bytes()
+          before='json.loads(record.read_text())'
+          after='json.loads(record.read_text(encoding="utf-8"))'
+          text=original.decode('utf-8')
+          assert text.count(before)==1
+          root=Path(os.environ['RUNNER_TEMP'])/'r-test-reader-diagnostic'
+          root.mkdir()
+          (root/'original-test.py').write_bytes(original)
+          path.write_text(text.replace(before,after),encoding='utf-8')
+          (root/'patched-test.py').write_bytes(path.read_bytes())
+          (root/'scope.json').write_text(json.dumps({
+              'scope':'diagnostic fixture-reader codec only; original worker and independent expected values unchanged',
+              'worker_source_revision':os.environ['QUALIFIED_CONTROL_SOURCE'],
+              'diagnostic_workflow_revision':os.environ['GITHUB_SHA'],
+              'original_reader':before,'diagnostic_reader':after,
+              'python_utf8_mode':sys.flags.utf8_mode,'ambient_text_codec':locale.getencoding()},indent=2)+'\n',encoding='utf-8')
+          PY
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05 # v2
         with:
           r-version: '4.6.1'
@@ -114,6 +137,7 @@ jobs:
             ${{ runner.temp }}/r-retention-controls.json
             ${{ runner.temp }}/r-retention-controls.log
             ${{ runner.temp }}/r-child-rss-controls
+            ${{ runner.temp }}/r-test-reader-diagnostic
           if-no-files-found: error
       - name: Block long collection on any platform control refusal
         if: always()
