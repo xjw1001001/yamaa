@@ -42,8 +42,8 @@ with tempfile.TemporaryDirectory() as directory:
         command = [sys.executable, "-I", "-c", program, str(output)]
         options = {}
         if kind == "direct-base-with-venv-launcher":
+            command[0] = sys._base_executable
             options = {
-                "executable": sys._base_executable,
                 "env": {**os.environ, "__PYVENV_LAUNCHER__": sys.executable},
             }
         process = subprocess.Popen(command, **options)
