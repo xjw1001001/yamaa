@@ -57,5 +57,6 @@ jobs:
           run-id: '38993856920'
           github-token: ${{ github.token }}
           path: wheels
-      - run: python3.12 -m pip install --only-binary=:all: wheels/*.whl
+      - run: |
+          python3.12 -m pip install --only-binary=:all: wheels/*.whl
       - run: python3.12 .github/smoke.py benchmarks/adam-adae-death
