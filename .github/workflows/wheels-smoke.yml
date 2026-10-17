@@ -1,0 +1,61 @@
+name: Wheel smoke test (9d2ba113)
+
+on:
+  push:
+    branches: ['wheels-9d2ba113-smoke']
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke:
+    name: smoke (${{ matrix.os }}, ${{ matrix.py }}, ${{ matrix.artifact }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-22.04, py: '3.12', run: '38993856920', artifact: wheel-manylinux_2_28_x86_64}
+          - {os: ubuntu-22.04, py: '3.13', run: '38993856920', artifact: wheel-manylinux_2_28_x86_64}
+          - {os: ubuntu-24.04, py: '3.12', run: '38993782988', artifact: native-python-ubuntu-24.04-3.14}
+          - {os: ubuntu-24.04, py: '3.13', run: '38993782988', artifact: native-python-ubuntu-24.04-3.14}
+          - {os: windows-latest, py: '3.12', run: '38993782988', artifact: native-python-windows-latest-3.14}
+          - {os: windows-latest, py: '3.13', run: '38993782988', artifact: native-python-windows-latest-3.14}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          run-id: ${{ matrix.run }}
+          github-token: ${{ github.token }}
+          path: wheels
+      - run: python -m pip install wheels/*.whl
+      - run: python .github/smoke.py benchmarks/adam-adae-death
+
+  rhel8:
+    name: smoke (rockylinux 8, glibc 2.28, 3.12, manylinux_2_28)
+    runs-on: ubuntu-24.04
+    container: rockylinux:8
+    steps:
+      - run: dnf install -y -q python3.12 python3.12-pip git
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-manylinux_2_28_x86_64
+          run-id: '38993856920'
+          github-token: ${{ github.token }}
+          path: wheels
+      - run: python3.12 -m pip install --only-binary=:all: wheels/*.whl
+      - run: python3.12 .github/smoke.py benchmarks/adam-adae-death
